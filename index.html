@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Workout Tracker</title>
+    <!-- Jalaali Date Library -->
     <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.js"></script>
+    <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -81,6 +83,10 @@
             background-color: #333; color: white; border: 1px solid #555; padding: 8px; border-radius: 4px; text-align: center; width: 100%; box-sizing: border-box; font-family: Arial;
         }
 
+        .ex-note {
+            font-size: 11px; color: #888; text-align: center; margin-top: 10px; font-style: italic; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 5px;
+        }
+
         .btn-main { background-color: var(--accent-color); color: black; border: none; width: 100%; padding: 14px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
 
         #loading { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: var(--accent-color); padding: 5px 10px; border-radius: 5px; font-size: 12px; display: none; z-index: 1000;}
@@ -130,7 +136,7 @@
         </div>
 
         <div class="card">
-            <h2>📈 Body Weight Progress</h2>
+            <h2>📈 Body Weight (Tir - Shahrivar)</h2>
             <div class="chart-container">
                 <canvas id="weightChart"></canvas>
             </div>
@@ -153,31 +159,31 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // برنامه تمرینی جدید با نکات
         const workoutData = {
             push: [
-                {id: 'benchpress', name: 'Barbell Bench Press', sets: 4, target: '8-10 reps', type: 'weight-rep'},
-                {id: 'incline_db', name: 'Incline DB Press', sets: 3, target: '10-12 reps', type: 'weight-rep'},
-                {id: 'chest_fly', name: 'Machine/Cable Chest Fly', sets: 3, target: '12-15 reps', type: 'weight-rep'},
-                {id: 'shoulder_press', name: 'Seated DB Shoulder Press', sets: 3, target: '10-12 reps', type: 'weight-rep'},
-                {id: 'lat_raise', name: 'DB Lateral Raise', sets: 4, target: '12-15 reps', type: 'weight-rep'},
-                {id: 'tricep_push', name: 'Cable Tricep Pushdown', sets: 3, target: '12-15 reps', type: 'weight-rep'}
+                {id: 'bb_bench', name: 'Barbell Bench Press', sets: 4, target: '6-10 reps', type: 'weight-rep', note: 'Heavy load, touch chest lightly.'},
+                {id: 'inc_db_press', name: 'Incline Dumbbell Press', sets: 3, target: '10-12 reps', type: 'weight-rep', note: 'Focus on upper chest volume.'},
+                {id: 'arnold_press', name: 'Dumbbell Arnold Press', sets: 3, target: '10 reps', type: 'weight-rep', note: 'Full rotation for shoulder width.'},
+                {id: 'lat_raise', name: 'Lateral Raises (Dumbbell)', sets: 4, target: '15 reps', type: 'weight-rep', note: 'Strict form, no swinging.'},
+                {id: 'tricep_push', name: 'Cable Tricep Pushdowns', sets: 3, target: '12-15 reps', type: 'weight-rep', note: 'Squeeze at the bottom.'},
+                {id: 'bench_dips', name: 'Bench Dips', sets: 3, target: 'Failure', type: 'rep-only', note: 'Great for tricep endurance.'}
             ],
             pull: [
-                {id: 'pullup', name: 'Pull-up', sets: 4, target: '8-12 reps', type: 'rep-only'},
-                {id: 'barbell_row', name: 'Barbell Row', sets: 3, target: '8-10 reps', type: 'weight-rep'},
-                {id: 'cable_row', name: 'Seated Cable Row', sets: 3, target: '10-12 reps', type: 'weight-rep'},
-                {id: 'facepull', name: 'Face Pull', sets: 3, target: '12-15 reps', type: 'weight-rep'},
-                {id: 'bb_curl', name: 'Barbell Bicep Curl', sets: 3, target: '10-12 reps', type: 'weight-rep'},
-                {id: 'hammer_curl', name: 'DB Hammer Curl', sets: 3, target: '12-15 reps', type: 'weight-rep'}
+                {id: 'lat_pull', name: 'Lat Pulldown', sets: 4, target: '10 reps', type: 'weight-rep', note: 'Pull with elbows, not hands.'},
+                {id: 'db_row', name: 'One-Arm Dumbbell Row', sets: 3, target: '10 reps', type: 'weight-rep', note: 'Stretch the lat at the bottom.'},
+                {id: 'facepull', name: 'Face Pulls (Cable)', sets: 3, target: '15 reps', type: 'weight-rep', note: 'Pull to face, hold for 1 sec.'},
+                {id: 'db_pullover', name: 'Dumbbell Pullover', sets: 3, target: '12 reps', type: 'weight-rep', note: 'Expand the ribcage, slow tempo.'},
+                {id: 'ez_curl', name: 'EZ-Bar Bicep Curls', sets: 3, target: '10-12 reps', type: 'weight-rep', note: 'Squeeze biceps hard at top.'},
+                {id: 'hammer_curl', name: 'Hammer Curls', sets: 3, target: '12 reps', type: 'weight-rep', note: 'Improves grip and arm thickness.'}
             ],
             legs: [
-                {id: 'squat', name: 'Barbell Squat', sets: 4, target: '8-10 reps', type: 'weight-rep'},
-                {id: 'leg_press', name: 'Leg Press Machine', sets: 3, target: '10-12 reps', type: 'weight-rep'},
-                {id: 'leg_curl', name: 'Leg Curl', sets: 3, target: '12 reps', type: 'weight-rep'},
-                {id: 'leg_ext', name: 'Leg Extension', sets: 3, target: '12-15 reps', type: 'weight-rep'},
-                {id: 'calf_raise', name: 'Standing Calf Raise', sets: 4, target: '15-20 reps', type: 'weight-rep'},
-                {id: 'crunch', name: 'Ab Crunches', sets: 3, target: '20 reps', type: 'rep-only'},
-                {id: 'plank', name: 'Plank', sets: 3, target: 'Hold max time', type: 'time'}
+                {id: 'bb_squat', name: 'Barbell Back Squat', sets: 4, target: '8-10 reps', type: 'weight-rep', note: 'Deep reps, chest up.'},
+                {id: 'db_lunges', name: 'Dumbbell Lunges', sets: 3, target: '12/leg reps', type: 'weight-rep', note: 'Boosts balance and endurance.'},
+                {id: 'db_leg_curl', name: 'Dumbbell Leg Curls', sets: 3, target: '12-15 reps', type: 'weight-rep', note: 'Control weight on the way down.'},
+                {id: 'calf_raise', name: 'Standing Calf Raises', sets: 4, target: '20 reps', type: 'weight-rep', note: 'Full stretch at the bottom.'},
+                {id: 'lying_leg_raise', name: 'Lying Leg Raises', sets: 3, target: '15-20 reps', type: 'rep-only', note: 'Don’t let feet touch the floor.'},
+                {id: 'plank', name: 'Plank', sets: 3, target: 'Max', type: 'time', note: 'Total core stability.'}
             ]
         };
 
@@ -206,7 +212,6 @@
 
         function showLoading(show) { document.getElementById('loading').style.display = show ? 'block' : 'none'; }
 
-        // اسکن کل دیتابیس برای پیدا کردن دقیق‌ترین رکوردها
         async function recalculatePRs() {
             let newPrs = {};
             try {
@@ -215,8 +220,6 @@
                     const data = doc.data();
                     if (data.exercises) {
                         for (const [exId, sets] of Object.entries(data.exercises)) {
-                            
-                            // پیدا کردن نوع حرکت
                             let exType = 'weight-rep'; 
                             for(const cat in workoutData) {
                                 const found = workoutData[cat].find(e => e.id === exId);
@@ -395,6 +398,7 @@
                             <span class="pr-info">${prText}</span>
                         </div>
                         ${setInputsHtml}
+                        <div class="ex-note">💡 Focus: ${ex.note}</div>
                     </div>
                 `;
             });
@@ -403,11 +407,10 @@
         window.saveTodayWorkout = async () => {
             showLoading(true);
 
-            // سناریوی پاک کردن روز (Rest / Clear)
             if (currentRoutine === 'rest') {
                 try {
                     await deleteDoc(doc(db, "daily_logs", selectedDateStr));
-                    await recalculatePRs(); // آپدیت رکوردهای شخصی بعد از پاک شدن دیتای این روز
+                    await recalculatePRs(); 
                     await fetchAllData();
                     renderCalendar();
                     renderChart();
@@ -420,7 +423,6 @@
                 return;
             }
 
-            // سناریوی ذخیره عادی
             let logData = {
                 routine: currentRoutine,
                 bodyWeight: document.getElementById('daily-body-weight').value || null,
@@ -449,7 +451,7 @@
 
             try {
                 await setDoc(doc(db, "daily_logs", selectedDateStr), logData);
-                await recalculatePRs(); // اسکن مجدد دیتابیس برای پیدا کردن رکوردهای جدید
+                await recalculatePRs(); 
                 await fetchAllData(); 
                 renderCalendar();
                 renderChart();
@@ -460,21 +462,25 @@
         };
 
         function renderChart() {
-            // ساخت یک تایم‌لاین 90 روزه پیوسته برای مقیاس واقعی زمان
+            // ساخت بازه ثابت تابستان: از ۱ تیر (ماه ۴) تا ۳۱ شهریور (ماه ۶)
             const labels = [];
             const dataPoints = [];
-            const today = new Date();
+            const targetYear = todayJ.jy; // سال شمسی جاری
 
-            for (let i = 89; i >= 0; i--) {
-                const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-                const j = jalaali.toJalaali(d.getFullYear(), d.getMonth() + 1, d.getDate());
-                const dateStr = `${j.jy}-${String(j.jm).padStart(2,'0')}-${String(j.jd).padStart(2,'0')}`;
-                
-                labels.push(`${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`);
-                
-                // چک کردن اینکه آیا در این روز خاص وزنی ثبت شده یا نه
-                const entry = window.weightHistory.find(item => item.date === dateStr);
-                dataPoints.push(entry ? entry.weight : null);
+            for (let m = 4; m <= 6; m++) {
+                for (let d = 1; d <= 31; d++) {
+                    const dateStr = `${targetYear}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                    
+                    // فقط روزهایی مثل 04/01 و 04/10 روی نمودار نوشته می‌شن تا شلوغ نشه
+                    if (d === 1 || d === 15 || d === 31) {
+                        labels.push(`${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')}`);
+                    } else {
+                        labels.push(''); // مخفی کردن نوشته‌های اضافی محور افقی
+                    }
+                    
+                    const entry = window.weightHistory.find(item => item.date === dateStr);
+                    dataPoints.push(entry ? entry.weight : null);
+                }
             }
 
             const ctx = document.getElementById('weightChart').getContext('2d');
@@ -492,8 +498,8 @@
                         borderWidth: 2,
                         pointBackgroundColor: '#fff',
                         pointBorderColor: '#ff9800',
-                        pointRadius: 4,
-                        spanGaps: true, // این خط باعث میشه نقاط از روی روزهای خالی به هم وصل بشن
+                        pointRadius: 3,
+                        spanGaps: true, 
                         tension: 0.2,
                         fill: true
                     }]
@@ -506,7 +512,8 @@
                         x: { 
                             ticks: { 
                                 color: '#aaa',
-                                maxTicksLimit: 15 // جلوگیری از شلوغ شدن محور افقی
+                                maxRotation: 0,
+                                autoSkip: false
                             }, 
                             grid: { color: '#333', display: false } 
                         },
