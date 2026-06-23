@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>برنامه تمرینی من</title>
+    <title>دفترچه تمرین دیجیتال</title>
+    <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.js"></script>
     <style>
         :root {
             --bg-color: #121212;
@@ -11,6 +12,8 @@
             --text-color: #e0e0e0;
             --accent-color: #ff9800;
             --border-radius: 12px;
+            --today-bg: #2e7d32;
+            --selected-bg: #ff9800;
         }
         
         body {
@@ -18,146 +21,136 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 15px;
+            padding: 10px;
             line-height: 1.6;
         }
 
-        .container { max-width: 800px; margin: 0 auto; }
-        h1, h2 { color: var(--accent-color); text-align: center; }
-        h2 { border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 20px; }
-        h3 { color: #fff; margin-top: 25px; font-size: 18px; }
-
+        .container { max-width: 600px; margin: 0 auto; }
+        h1, h2, h3 { color: var(--accent-color); text-align: center; margin: 10px 0; }
+        
         .card {
             background-color: var(--card-bg);
             border-radius: var(--border-radius);
             padding: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.4);
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 10px;
-            text-align: center;
-        }
-
-        .stat-box {
-            background-color: #2c2c2c;
-            padding: 10px;
-            border-radius: 8px;
-            border-bottom: 3px solid var(--accent-color);
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        .stat-label { font-size: 11px; color: #aaa; display: block; }
-
-        .exercise-item {
-            background-color: #262626;
-            margin: 10px 0;
-            padding: 12px;
-            border-radius: 8px;
-            border-right: 4px solid var(--accent-color);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .ex-header {
+        /* استایل تقویم */
+        .calendar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-weight: bold;
-            font-size: 15px;
+            margin-bottom: 15px;
         }
-
-        .pr-badge {
-            background-color: rgba(255, 152, 0, 0.2);
-            color: var(--accent-color);
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+        .calendar-header button {
+            background: #333; color: white; border: none; padding: 5px 15px; border-radius: 5px; font-weight: bold;
         }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+        .weekday { font-size: 11px; color: #aaa; font-weight: bold; padding-bottom: 5px; }
+        .day {
+            background-color: #262626;
+            padding: 8px 0;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .day.today { background-color: var(--today-bg); color: white; font-weight: bold; }
+        .day.selected { border: 2px solid var(--selected-bg); }
+        .day.has-data { border-bottom: 3px solid #2196f3; }
 
-        .controls {
+        /* انتخاب نوع برنامه */
+        .routine-selector {
             display: flex;
+            justify-content: space-around;
+            gap: 8px;
+            margin: 15px 0;
+        }
+        .routine-btn {
+            flex: 1; background-color: #333; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;
+        }
+        .routine-btn.active { background-color: var(--accent-color); color: black; }
+
+        /* جدول ست‌ها */
+        .exercise-card {
+            background-color: #262626;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-right: 4px solid var(--accent-color);
+        }
+        .ex-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 8px; font-size: 14px;}
+        .pr-info { font-size: 11px; color: #aaa; }
+        
+        .set-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 2fr;
             gap: 8px;
             align-items: center;
+            margin-bottom: 6px;
         }
-
+        .set-row span { font-size: 12px; color: #ccc; text-align: center; }
         input[type="number"] {
-            background-color: #333;
-            color: white;
-            border: 1px solid #555;
-            padding: 8px;
-            border-radius: 5px;
-            width: 70px;
-            text-align: center;
-            font-family: inherit;
+            background-color: #333; color: white; border: 1px solid #555; padding: 6px; border-radius: 4px; text-align: center; width: 100%; box-sizing: border-box;
         }
 
-        button {
-            background-color: var(--accent-color);
-            color: #000;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .btn-history {
-            background-color: #444;
-            color: #fff;
+        .btn-main {
+            background-color: var(--accent-color); color: black; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 15px;
         }
 
         #loading {
-            text-align: center;
-            color: var(--accent-color);
-            font-weight: bold;
-            display: none;
-            margin: 10px 0;
+            position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: var(--accent-color); padding: 5px 10px; border-radius: 5px; font-size: 12px; display: none;
         }
-
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>🏋️ تراکر تمرینی</h1>
+        <div id="loading">⏳ دیتابیس...</div>
+        
+        <h3>🗓️ انتخاب تاریخ و مدیریت تمرین</h3>
         
         <div class="card">
-            <div class="stats-grid">
-                <div class="stat-box"><span class="stat-label">قد / وزن</span>۱۸۳ / ۷۶</div>
-                <div class="stat-box"><span class="stat-label">تیپ بدنی</span>اکتومورف</div>
-                <div class="stat-box"><span class="stat-label">رژیم روزانه</span>۳۰۰۰ کالری / ۱۵۰g پروتئین</div>
+            <div class="calendar-header">
+                <button onclick="changeMonth(-1)">◀ ماه قبل</button>
+                <span id="calendar-month-year" style="font-weight: bold;"></span>
+                <button onclick="changeMonth(1)">ماه بعد ▶</button>
+            </div>
+            <div class="calendar-grid" id="calendar-grid">
+                </div>
+        </div>
+
+        <div class="card">
+            <h2 id="selected-date-title">تاریخی انتخاب نشده</h2>
+            <p style="text-align: center; font-size: 13px; color: #aaa; margin: 0;">امروز چه برنامه‌ای داری؟</p>
+            <div class="routine-selector">
+                <button class="routine-btn" id="btn-push" onclick="selectRoutine('push')">فشار (Push)</button>
+                <button class="routine-btn" id="btn-pull" onclick="selectRoutine('pull')">کشش (Pull)</button>
+                <button class="routine-btn" id="btn-legs" onclick="selectRoutine('legs')">پا (Legs)</button>
+                <button class="routine-btn" id="btn-rest" onclick="selectRoutine('rest')">استراحت</button>
             </div>
         </div>
 
-        <div id="loading">⏳ در حال ارتباط با دیتابیس...</div>
-
-        <div class="card">
-            <h2>🔥 روز اول: فشار (Push)</h2>
-            <div id="push-workout"></div>
-        </div>
-
-        <div class="card">
-            <h2>🔥 روز دوم: کشش (Pull)</h2>
-            <div id="pull-workout"></div>
-        </div>
-
-        <div class="card">
-            <h2>🔥 روز سوم: پا (Legs)</h2>
-            <div id="legs-workout"></div>
+        <div id="workout-section" style="display: none;">
+            <div class="card">
+                <h2>🏋️ لیست حرکات و ثبت ست‌ها</h2>
+                <div id="exercises-container"></div>
+                <button class="btn-main" onclick="saveTodayWorkout()">💾 ثبت نهایی تمرین این روز</button>
+            </div>
         </div>
     </div>
 
     <script type="module">
-        // اتصال به دیتابیس فایربیس با استفاده از کلیدهای شما
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+        // تنظیمات فایربیس شما
         const firebaseConfig = {
             apiKey: "AIzaSyBC_NPNDbO0E9SMROfMlmlgYh54Eb_YpJs",
             authDomain: "workouttracker-bee8d.firebaseapp.com",
@@ -169,147 +162,233 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const userDocRef = doc(db, "users", "my_data"); // آدرس ذخیره اطلاعات در دیتابیس
 
-        // لیست حرکات
-        const workouts = {
+        // ساختار اطلاعات تمرینات
+        const workoutData = {
             push: [
-                {id: 'benchpress', name: 'پرس سینه هالتر (۴ ست ۸-۱۰)'},
-                {id: 'incline_db', name: 'پرس بالاسینه دمبل (۳ ست ۱۰-۱۲)'},
-                {id: 'chest_fly', name: 'قفسه سینه دستگاه (۳ ست ۱۲-۱۵)'},
-                {id: 'shoulder_press', name: 'پرس سرشانه دمبل (۳ ست ۱۰-۱۲)'},
-                {id: 'lat_raise', name: 'نشر جانب دمبل (۴ ست ۱۲-۱۵)'},
-                {id: 'tricep_push', name: 'پشت بازو سیم‌کش (۳ ست ۱۲-۱۵)'}
+                {id: 'benchpress', name: 'پرس سینه هالتر', sets: 4},
+                {id: 'incline_db', name: 'پرس بالاسینه دمبل', sets: 3},
+                {id: 'chest_fly', name: 'قفسه سینه دستگاه', sets: 3},
+                {id: 'shoulder_press', name: 'پرس سرشانه دمبل', sets: 3},
+                {id: 'lat_raise', name: 'نشر جانب دمبل', sets: 4},
+                {id: 'tricep_push', name: 'پشت بازو سیم‌کش', sets: 3}
             ],
             pull: [
-                {id: 'pullup', name: 'بارفیکس / لت (۴ ست ۸-۱۲)'},
-                {id: 'barbell_row', name: 'زیربغل هالتر خم (۳ ست ۸-۱۰)'},
-                {id: 'cable_row', name: 'قایقی سیم‌کش (۳ ست ۱۰-۱۲)'},
-                {id: 'facepull', name: 'فیس‌پول (۳ ست ۱۲-۱۵)'},
-                {id: 'bb_curl', name: 'جلو بازو هالتر (۳ ست ۱۰-۱۲)'},
-                {id: 'hammer_curl', name: 'جلو بازو دمبل چکشی (۳ ست ۱۲-۱۵)'}
+                {id: 'pullup', name: 'بارفیکس / لت سیم‌کش', sets: 4},
+                {id: 'barbell_row', name: 'زیربغل هالتر خم', sets: 3},
+                {id: 'cable_row', name: 'قایقی سیم‌کش', sets: 3},
+                {id: 'facepull', name: 'فیس‌پول', sets: 3},
+                {id: 'bb_curl', name: 'جلو بازو هالتر', sets: 3},
+                {id: 'hammer_curl', name: 'جلو بازو دمبل چکشی', sets: 3}
             ],
             legs: [
-                {id: 'squat', name: 'اسکوات با هالتر (۴ ست ۸-۱۰)'},
-                {id: 'leg_press', name: 'پرس پا دستگاه (۳ ست ۱۰-۱۲)'},
-                {id: 'leg_curl', name: 'پشت ران دستگاه (۳ ست ۱۲)'},
-                {id: 'leg_ext', name: 'جلو ران دستگاه (۳ ست ۱۲-۱۵)'},
-                {id: 'calf_raise', name: 'ساق پا ایستاده (۴ ست ۱۵-۲۰)'},
-                {id: 'crunch', name: 'کرانچ شکم (۳ ست ۲۰)'}
+                {id: 'squat', name: 'اسکوات با هالتر', sets: 4},
+                {id: 'leg_press', name: 'پرس پا دستگاه', sets: 3},
+                {id: 'leg_curl', name: 'پشت ران دستگاه', sets: 3},
+                {id: 'leg_ext', name: 'جلو ران دستگاه', sets: 3},
+                {id: 'calf_raise', name: 'ساق پا ایستاده', sets: 4},
+                {id: 'crunch', name: 'کرانچ شکم', sets: 3}
             ]
         };
 
-        // تولید ظاهر حرکات در سایت
-        function renderWorkouts() {
-            for (const day in workouts) {
-                const container = document.getElementById(`${day}-workout`);
-                workouts[day].forEach(ex => {
-                    container.innerHTML += `
-                        <div class="exercise-item">
-                            <div class="ex-header">
-                                <span>${ex.name}</span>
-                                <span class="pr-badge">PR: <span id="pr-${ex.id}">0</span> kg</span>
-                            </div>
-                            <div class="controls">
-                                <input type="number" id="input-${ex.id}" placeholder="وزن(kg)">
-                                <button onclick="window.saveRecord('${ex.id}')">ثبت</button>
-                                <button class="btn-history" onclick="window.showHistory('${ex.id}', '${ex.name}')">تایخچه</button>
-                            </div>
-                        </div>
-                    `;
-                });
+        const monthNames = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+        
+        // وضعیت فعلی برنامه
+        let todayG = new Date();
+        let todayJ = jalaali.toJalaali(todayG.getFullYear(), todayG.getMonth() + 1, todayG.getDate());
+        
+        let viewYear = todayJ.jy;
+        let viewMonth = todayJ.jm;
+        
+        let selectedDateStr = `${todayJ.jy}-${String(todayJ.jm).padStart(2,'0')}-${String(todayJ.jd).padStart(2,'0')}`;
+        let currentRoutine = '';
+        let globalPrs = {};
+
+        // لود اولیه سیستم
+        window.onload = async () => {
+            await loadPRs();
+            renderCalendar();
+            await selectDate(todayJ.jy, todayJ.jm, todayJ.jd);
+        };
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // دریافت بهترین رکوردها (PR)
+        async function loadPRs() {
+            try {
+                const prSnap = await getDoc(doc(db, "totals", "prs"));
+                if (prSnap.exists()) globalPrs = prSnap.data();
+            } catch (e) { console.error(e); }
+        }
+
+        // رندر کردن گرافیکی تقویم
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const title = document.getElementById('calendar-month-year');
+            grid.innerHTML = '';
+            title.innerText = `${monthNames[viewMonth - 1]} ${viewYear}`;
+
+            // روزهای هفته
+            const weekdays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+            weekdays.forEach(w => grid.innerHTML += `<div class="weekday">${w}</div>`);
+
+            // محاسبه اولین روز ماه در هفته
+            const gFirstDay = jalaali.toGregorian(viewYear, viewMonth, 1);
+            const firstDayIndex = (new Date(gFirstDay.gy, gFirstDay.gm - 1, gFirstDay.gd).getDay() + 1) % 7; 
+
+            // تعداد روزهای ماه
+            let totalDays = viewMonth <= 6 ? 31 : 30;
+            if (viewMonth === 12) totalDays = jalaali.isLeapJalaaliYear(viewYear) ? 30 : 29;
+
+            // فضاهای خالی اول ماه
+            for (let i = 0; i < firstDayIndex; i++) {
+                grid.innerHTML += `<div></div>`;
+            }
+
+            // ساخت روزها
+            for (let d = 1; d <= totalDays; d++) {
+                const dateStr = `${viewYear}-${String(viewMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                let classes = 'day';
+                if (viewYear === todayJ.jy && viewMonth === todayJ.jm && d === todayJ.jd) classes += ' today';
+                if (dateStr === selectedDateStr) classes += ' selected';
+
+                grid.innerHTML += `<div class="${classes}" id="day-${d}" onclick="window.selectDate(${viewYear},${viewMonth},${d})">${d}</div>`;
             }
         }
 
-        // بارگذاری رکوردها از دیتابیس
-        async function loadData() {
-            document.getElementById('loading').style.display = 'block';
+        window.changeMonth = (dir) => {
+            viewMonth += dir;
+            if (viewMonth > 12) { viewMonth = 1; viewYear++; }
+            if (viewMonth < 1) { viewMonth = 12; viewYear--; }
+            renderCalendar();
+        };
+
+        // انتخاب یک روز خاص روی تقویم
+        window.selectDate = async (y, m, d) => {
+            selectedDateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            document.getElementById('selected-date-title').innerText = `تاریخ: ${y}/${m}/${d}`;
+            
+            renderCalendar();
+            showLoading(true);
+            
+            // پاک کردن استایل دکمه‌های قبلی
+            document.querySelectorAll('.routine-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('workout-section').style.display = 'none';
+            currentRoutine = '';
+
             try {
-                const docSnap = await getDoc(userDocRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    for (const day in workouts) {
-                        workouts[day].forEach(ex => {
-                            if(data[ex.id]) {
-                                document.getElementById(`pr-${ex.id}`).innerText = data[ex.id].pr || 0;
-                            }
-                        });
+                // دریافت سابقه روز انتخابی از دیتابیس
+                const daySnap = await getDoc(doc(db, "daily_logs", selectedDateStr));
+                if (daySnap.exists()) {
+                    const dayData = daySnap.exists() ? daySnap.data() : {};
+                    if (dayData.routine) {
+                        selectRoutine(dayData.routine, dayData.exercises);
                     }
                 }
-            } catch (error) {
-                console.error("خطا در دریافت اطلاعات:", error);
-            }
-            document.getElementById('loading').style.display = 'none';
-        }
+            } catch (e) { console.error(e); }
+            showLoading(false);
+        };
 
-        // تابع ثبت رکورد جدید
-        window.saveRecord = async (exId) => {
-            const weightVal = document.getElementById(`input-${exId}`).value;
-            if(!weightVal) {
-                alert('لطفاً اول وزنی که زدی رو بنویس!');
+        // انتخاب نوع برنامه (فشار، کشش، پا، استراحت)
+        window.selectRoutine = (routineType, savedExercises = null) => {
+            currentRoutine = routineType;
+            document.querySelectorAll('.routine-btn').forEach(b => b.classList.remove('active'));
+            
+            const activeBtn = document.getElementById(`btn-${routineType}`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            const container = document.getElementById('exercises-container');
+            container.innerHTML = '';
+
+            if (routineType === 'rest') {
+                document.getElementById('workout-section').style.display = 'none';
                 return;
             }
-            const weight = parseFloat(weightVal);
-            
-            document.getElementById('loading').style.display = 'block';
-            try {
-                const docSnap = await getDoc(userDocRef);
-                let allData = docSnap.exists() ? docSnap.data() : {};
-                let exData = allData[exId] || { pr: 0, history: [] };
 
-                // محاسبه بهترین رکورد
-                const newPr = Math.max(exData.pr, weight);
-                exData.pr = newPr;
-                
-                // اضافه کردن به تاریخچه (ثبت تاریخ و وزن)
-                const dateString = new Date().toLocaleDateString('fa-IR');
-                exData.history.push({ date: dateString, weight: weight });
-                
-                allData[exId] = exData;
+            document.getElementById('workout-section').style.display = 'block';
+            const exercises = workoutData[routineType] || [];
 
-                // ذخیره در فایربیس
-                await setDoc(userDocRef, allData, { merge: true });
+            exercises.forEach(ex => {
+                let setInputsHtml = '';
+                const savedSets = savedExercises && savedExercises[ex.id] ? savedExercises[ex.id] : [];
+                const currentPr = globalPrs[ex.id] || 0;
 
-                // آپدیت ظاهر سایت
-                document.getElementById(`pr-${exId}`).innerText = newPr;
-                document.getElementById(`input-${exId}`).value = '';
-                alert('عالی بود! رکوردت با موفقیت ذخیره شد. 💪');
-
-            } catch (error) {
-                alert('ارتباط با دیتابیس برقرار نشد. اینترنتت رو چک کن.');
-            }
-            document.getElementById('loading').style.display = 'none';
-        };
-
-        // تابع نمایش تاریخچه
-        window.showHistory = async (exId, exName) => {
-            document.getElementById('loading').style.display = 'block';
-            try {
-                const docSnap = await getDoc(userDocRef);
-                if (docSnap.exists() && docSnap.data()[exId]) {
-                    const history = docSnap.data()[exId].history || [];
-                    if(history.length === 0) {
-                        alert('هنوز رکوردی برای این حرکت ثبت نکردی.');
-                    } else {
-                        // نمایش 10 رکورد آخر
-                        let msg = `تاریخچه تمرین ${exName}:\n\n`;
-                        history.slice(-10).forEach(record => {
-                            msg += `📅 ${record.date} : 🏋️ ${record.weight} کیلوگرم\n`;
-                        });
-                        alert(msg);
-                    }
-                } else {
-                    alert('هنوز رکوردی برای این حرکت ثبت نکردی.');
+                for (let s = 1; s <= ex.sets; s++) {
+                    const savedW = savedSets[s-1]?.w || '';
+                    const savedR = savedSets[s-1]?.r || '';
+                    
+                    setInputsHtml += `
+                        <div class="set-row">
+                            <span>ست ${s}</span>
+                            <input type="number" id="w-${ex.id}-${s}" placeholder="وزن" value="${savedW}">
+                            <input type="number" id="r-${ex.id}-${s}" placeholder="تکرار" value="${savedR}">
+                        </div>
+                    `;
                 }
-            } catch (error) {
-                alert('خطا در دریافت تاریخچه.');
-            }
-            document.getElementById('loading').style.display = 'none';
+
+                container.innerHTML += `
+                    <div class="exercise-card">
+                        <div class="ex-header">
+                            <span>${ex.name}</span>
+                            <span class="pr-info">رکورد کلی: ${currentPr}kg</span>
+                        </div>
+                        ${setInputsHtml}
+                    </div>
+                `;
+            });
         };
 
-        // اجرای اولیه توابع
-        renderWorkouts();
-        loadData();
+        // ذخیره نهایی کل اطلاعات روز انتخابی
+        window.saveTodayWorkout = async () => {
+            if (!currentRoutine) return;
+            showLoading(true);
+
+            let logData = {
+                routine: currentRoutine,
+                exercises: {}
+            };
+
+            const exercises = workoutData[currentRoutine] || [];
+            let prUpdated = false;
+
+            exercises.forEach(ex => {
+                logData.exercises[ex.id] = [];
+                for (let s = 1; s <= ex.sets; s++) {
+                    const w = document.getElementById(`w-${ex.id}-${s}`).value;
+                    const r = document.getElementById(`r-${ex.id}-${s}`).value;
+                    
+                    if (w || r) {
+                        const weightNum = parseFloat(w) || 0;
+                        logData.exercises[ex.id].push({ w: w, r: r });
+
+                        // چک کردن جابجایی رکورد شخصی
+                        if (weightNum > (globalPrs[ex.id] || 0)) {
+                            globalPrs[ex.id] = weightNum;
+                            prUpdated = true;
+                        }
+                    }
+                }
+            });
+
+            try {
+                // ذخیره لاگ روزانه
+                await setDoc(doc(db, "daily_logs", selectedDateStr), logData);
+                
+                // در صورت ارتقای رکورد، دیتابیس توتال آپدیت می‌شود
+                if (prUpdated) {
+                    await setDoc(doc(db, "totals", "prs"), globalPrs);
+                }
+                
+                alert('کل برنامه و ست‌های این روز با موفقیت ثبت و سوابق بروزرسانی شد! 💪');
+                await selectDate(...selectedDateStr.split('-').map(Number));
+            } catch (e) {
+                alert('خطا در ذخیره‌سازی، لطفاً اینترنت خود را بررسی کنید.');
+                console.error(e);
+            }
+            showLoading(false);
+        };
     </script>
 </body>
 </html>
