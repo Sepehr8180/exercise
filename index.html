@@ -472,7 +472,7 @@
                     const dateStr = `${targetYear}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                     
                     // فقط روزهایی مثل 04/01 و 04/10 روی نمودار نوشته می‌شن تا شلوغ نشه
-                    if (d === 1 || d === 15 || d === 31) {
+                    if (d === 1 || d === 15 || (d === 31 && m===6)) {
                         labels.push(`${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')}`);
                     } else {
                         labels.push(''); // مخفی کردن نوشته‌های اضافی محور افقی
