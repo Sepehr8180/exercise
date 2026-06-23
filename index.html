@@ -206,6 +206,44 @@
 
         function showLoading(show) { document.getElementById('loading').style.display = show ? 'block' : 'none'; }
 
+        // اسکن کل دیتابیس برای پیدا کردن دقیق‌ترین رکوردها
+        async function recalculatePRs() {
+            let newPrs = {};
+            try {
+                const logsSnapshot = await getDocs(collection(db, "daily_logs"));
+                logsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.exercises) {
+                        for (const [exId, sets] of Object.entries(data.exercises)) {
+                            
+                            // پیدا کردن نوع حرکت
+                            let exType = 'weight-rep'; 
+                            for(const cat in workoutData) {
+                                const found = workoutData[cat].find(e => e.id === exId);
+                                if(found) exType = found.type;
+                            }
+
+                            sets.forEach(set => {
+                                if (exType === 'time') {
+                                    const totalSec = (parseFloat(set.min) || 0) * 60 + (parseFloat(set.sec) || 0);
+                                    if (totalSec > (newPrs[exId] || 0)) newPrs[exId] = totalSec;
+                                } else if (exType === 'rep-only') {
+                                    const r = parseFloat(set.r) || 0;
+                                    if (r > (newPrs[exId] || 0)) newPrs[exId] = r;
+                                } else {
+                                    const w = parseFloat(set.w) || 0;
+                                    if (w > (newPrs[exId] || 0)) newPrs[exId] = w;
+                                }
+                            });
+                        }
+                    }
+                });
+                
+                globalPrs = newPrs;
+                await setDoc(doc(db, "totals", "prs"), globalPrs);
+            } catch(e) { console.error("Error recalculating PRs:", e); }
+        }
+
         async function fetchAllData() {
             try {
                 const prSnap = await getDoc(doc(db, "totals", "prs"));
@@ -222,8 +260,6 @@
                         window.weightHistory.push({ date: doc.id, weight: parseFloat(data.bodyWeight) });
                     }
                 });
-                
-                window.weightHistory.sort((a, b) => a.date.localeCompare(b.date));
             } catch (e) { console.error(e); }
         }
 
@@ -367,28 +403,30 @@
         window.saveTodayWorkout = async () => {
             showLoading(true);
 
+            // سناریوی پاک کردن روز (Rest / Clear)
             if (currentRoutine === 'rest') {
                 try {
                     await deleteDoc(doc(db, "daily_logs", selectedDateStr));
+                    await recalculatePRs(); // آپدیت رکوردهای شخصی بعد از پاک شدن دیتای این روز
                     await fetchAllData();
                     renderCalendar();
                     renderChart();
                     document.getElementById('daily-body-weight').value = '';
                     document.getElementById('workout-section').style.display = 'none';
                     document.querySelectorAll('.routine-btn').forEach(b => b.classList.remove('active'));
-                    alert('Day data cleared from server successfully! 🔄');
+                    alert('Day data cleared and PRs updated! 🔄');
                 } catch(e) { alert('Error clearing data.'); }
                 showLoading(false);
                 return;
             }
 
+            // سناریوی ذخیره عادی
             let logData = {
                 routine: currentRoutine,
                 bodyWeight: document.getElementById('daily-body-weight').value || null,
                 exercises: {}
             };
 
-            let prUpdated = false;
             const exercises = workoutData[currentRoutine] || [];
 
             exercises.forEach(ex => {
@@ -397,43 +435,21 @@
                     if (ex.type === 'time') {
                         const min = document.getElementById(`min-${ex.id}-${s}`).value;
                         const sec = document.getElementById(`sec-${ex.id}-${s}`).value;
-                        if (min || sec) {
-                            logData.exercises[ex.id].push({ min: min, sec: sec });
-                            const totalSec = (parseFloat(min) || 0) * 60 + (parseFloat(sec) || 0);
-                            if (totalSec > (globalPrs[ex.id] || 0)) {
-                                globalPrs[ex.id] = totalSec;
-                                prUpdated = true;
-                            }
-                        }
+                        if (min || sec) logData.exercises[ex.id].push({ min: min, sec: sec });
                     } else if (ex.type === 'rep-only') {
                         const r = document.getElementById(`r-${ex.id}-${s}`).value;
-                        if (r) {
-                            logData.exercises[ex.id].push({ r: r });
-                            const repNum = parseFloat(r) || 0;
-                            if (repNum > (globalPrs[ex.id] || 0)) {
-                                globalPrs[ex.id] = repNum;
-                                prUpdated = true;
-                            }
-                        }
+                        if (r) logData.exercises[ex.id].push({ r: r });
                     } else {
                         const w = document.getElementById(`w-${ex.id}-${s}`).value;
                         const r = document.getElementById(`r-${ex.id}-${s}`).value;
-                        if (w || r) {
-                            logData.exercises[ex.id].push({ w: w, r: r });
-                            const weightNum = parseFloat(w) || 0;
-                            if (weightNum > (globalPrs[ex.id] || 0)) {
-                                globalPrs[ex.id] = weightNum;
-                                prUpdated = true;
-                            }
-                        }
+                        if (w || r) logData.exercises[ex.id].push({ w: w, r: r });
                     }
                 }
             });
 
             try {
                 await setDoc(doc(db, "daily_logs", selectedDateStr), logData);
-                if (prUpdated) await setDoc(doc(db, "totals", "prs"), globalPrs);
-                
+                await recalculatePRs(); // اسکن مجدد دیتابیس برای پیدا کردن رکوردهای جدید
                 await fetchAllData(); 
                 renderCalendar();
                 renderChart();
@@ -444,8 +460,22 @@
         };
 
         function renderChart() {
-            const labels = window.weightHistory.slice(-90).map(item => item.date.substring(5));
-            const dataPoints = window.weightHistory.slice(-90).map(item => item.weight);
+            // ساخت یک تایم‌لاین 90 روزه پیوسته برای مقیاس واقعی زمان
+            const labels = [];
+            const dataPoints = [];
+            const today = new Date();
+
+            for (let i = 89; i >= 0; i--) {
+                const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                const j = jalaali.toJalaali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+                const dateStr = `${j.jy}-${String(j.jm).padStart(2,'0')}-${String(j.jd).padStart(2,'0')}`;
+                
+                labels.push(`${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`);
+                
+                // چک کردن اینکه آیا در این روز خاص وزنی ثبت شده یا نه
+                const entry = window.weightHistory.find(item => item.date === dateStr);
+                dataPoints.push(entry ? entry.weight : null);
+            }
 
             const ctx = document.getElementById('weightChart').getContext('2d');
             if (weightChartInstance) weightChartInstance.destroy();
@@ -463,6 +493,7 @@
                         pointBackgroundColor: '#fff',
                         pointBorderColor: '#ff9800',
                         pointRadius: 4,
+                        spanGaps: true, // این خط باعث میشه نقاط از روی روزهای خالی به هم وصل بشن
                         tension: 0.2,
                         fill: true
                     }]
@@ -472,7 +503,13 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { labels: { color: '#e0e0e0' } } },
                     scales: {
-                        x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
+                        x: { 
+                            ticks: { 
+                                color: '#aaa',
+                                maxTicksLimit: 15 // جلوگیری از شلوغ شدن محور افقی
+                            }, 
+                            grid: { color: '#333', display: false } 
+                        },
                         y: { 
                             min: 68, 
                             max: 80, 
