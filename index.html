@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>برنامه تمرینی و تغذیه من</title>
+    <style>
+        /* تنظیمات رنگ‌ها و تم دارک */
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #ff9800; /* رنگ نارنجی اسپرت */
+            --border-radius: 12px;
+        }
+        
+        body {
+            font-family: Tahoma, Arial, sans-serif; /* فونت‌های استاندارد که روی همه گوشی‌ها خواناست */
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            line-height: 1.8;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--accent-color);
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+
+        h2 {
+            color: var(--accent-color);
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+            font-size: 20px;
+        }
+
+        h3 {
+            color: #fff;
+            margin-top: 25px;
+            font-size: 18px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        /* بخش اطلاعات بدنی */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background-color: #2c2c2c;
+            padding: 15px 10px;
+            border-radius: 8px;
+            border-bottom: 3px solid var(--accent-color);
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #aaa;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* لیست حرکات و تغذیه */
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            background-color: #262626;
+            margin: 10px 0;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border-right: 4px solid var(--accent-color);
+            font-size: 15px;
+        }
+
+        /* تاکید روی بخش‌های مهم تغذیه */
+        strong {
+            color: var(--accent-color);
+        }
+
+        /* تنظیمات اختصاصی برای صفحه‌های کوچک موبایل */
+        @media (max-width: 400px) {
+            h1 { font-size: 20px; }
+            h2 { font-size: 18px; }
+            li { font-size: 14px; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🏋️ برنامه تمرینی و تغذیه</h1>
+        
+        <div class="card">
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-label">قد</span>
+                    ۱۸۳ سانتی‌متر
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">وزن</span>
+                    ۷۶ کیلوگرم
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">تیپ بدنی</span>
+                    اکتومورف
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">هدف اصلی</span>
+                    افزایش حجم
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔥 برنامه تمرینی (سیستم PPL)</h2>
+            
+            <h3>روز اول: فشار (Push) - سینه، سرشانه، پشت‌بازو</h3>
+            <ul>
+                <li>پرس سینه هالتر - ۴ ست ۸ تا ۱۰ تکرار</li>
+                <li>پرس بالاسینه دمبل - ۳ ست ۱۰ تا ۱۲ تکرار</li>
+                <li>قفسه سینه دستگاه یا کابل - ۳ ست ۱۲ تا ۱۵ تکرار</li>
+                <li>پرس سرشانه دمبل نشسته - ۳ ست ۱۰ تا ۱۲ تکرار</li>
+                <li>نشر جانب دمبل - ۴ ست ۱۲ تا ۱۵ تکرار</li>
+                <li>پشت بازو سیم‌کش با طناب - ۳ ست ۱۲ تا ۱۵ تکرار</li>
+            </ul>
+
+            <h3>روز دوم: کشش (Pull) - زیربغل، پشت، جلوبازو</h3>
+            <ul>
+                <li>بارفیکس یا لت سیم‌کش از جلو - ۴ ست ۸ تا ۱۲ تکرار</li>
+                <li>زیربغل هالتر خم - ۳ ست ۸ تا ۱۰ تکرار</li>
+                <li>قایقی سیم‌کش - ۳ ست ۱۰ تا ۱۲ تکرار</li>
+                <li>فیس‌پول (Face Pull) - ۳ ست ۱۲ تا ۱۵ تکرار</li>
+                <li>جلو بازو هالتر - ۳ ست ۱۰ تا ۱۲ تکرار</li>
+                <li>جلو بازو دمبل چکشی - ۳ ست ۱۲ تا ۱۵ تکرار</li>
+            </ul>
+
+            <h3>روز سوم: پا (Legs) - ران، همسترینگ، شکم</h3>
+            <ul>
+                <li>اسکوات با هالتر - ۴ ست ۸ تا ۱۰ تکرار</li>
+                <li>پرس پا دستگاه - ۳ ست ۱۰ تا ۱۲ تکرار</li>
+                <li>پشت ران دستگاه (Leg Curl) - ۳ ست ۱۲ تکرار</li>
+                <li>جلو ران دستگاه (Leg Extension) - ۳ ست ۱۲ تا ۱۵ تکرار</li>
+                <li>ساق پا ایستاده دستگاه - ۴ ست ۱۵ تا ۲۰ تکرار</li>
+                <li>کرانچ شکم - ۳ ست ۲۰ تکرار</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>🍗 برنامه تغذیه (اقتصادی دانشجویی)</h2>
+            <p style="text-align:center; color: #aaa; font-size: 14px;">هدف روزانه: ۳۰۰۰ کالری | ۱۵۰ گرم پروتئین</p>
+            <ul>
+                <li><strong>صبحانه:</strong> اوتمیل (جو دوسر + شیر) + تخم‌مرغ آب‌پز</li>
+                <li><strong>ناهار:</strong> سینه مرغ + برنج (منبع کربوهیدرات عالی و مقرون‌به‌صرفه)</li>
+                <li><strong>شام / بعد تمرین:</strong> ماکارونی با سویا (بمب کربوهیدرات و پروتئین گیاهی)</li>
+                <li><strong>نکات مهم:</strong> پرهیز از مکمل‌های غیرضروری مثل BCAA برای مدیریت بودجه. در صورت نیاز، پودر آب پنیر یا کراتین مونوهیدرات به عنوان مکمل اضافه شود.</li>
+            </ul>
+        </div>
+    </div>
+
+</body>
+  </html>
+  
