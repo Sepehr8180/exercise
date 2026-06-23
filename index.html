@@ -3,184 +3,313 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>برنامه تمرینی و تغذیه من</title>
+    <title>تراکر تمرینی من</title>
     <style>
-        /* تنظیمات رنگ‌ها و تم دارک */
         :root {
             --bg-color: #121212;
             --card-bg: #1e1e1e;
             --text-color: #e0e0e0;
-            --accent-color: #ff9800; /* رنگ نارنجی اسپرت */
+            --accent-color: #ff9800;
             --border-radius: 12px;
         }
         
         body {
-            font-family: Tahoma, Arial, sans-serif; /* فونت‌های استاندارد که روی همه گوشی‌ها خواناست */
+            font-family: Tahoma, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
             padding: 15px;
-            line-height: 1.8;
+            line-height: 1.6;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            text-align: center;
-            color: var(--accent-color);
-            margin-bottom: 30px;
-            font-size: 24px;
-        }
-
-        h2 {
-            color: var(--accent-color);
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-            font-size: 20px;
-        }
-
-        h3 {
-            color: #fff;
-            margin-top: 25px;
-            font-size: 18px;
-        }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1, h2 { color: var(--accent-color); text-align: center; }
+        h2 { border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 20px; }
+        h3 { color: #fff; margin-top: 25px; font-size: 18px; }
 
         .card {
             background-color: var(--card-bg);
             border-radius: var(--border-radius);
-            padding: 20px;
-            margin-bottom: 25px;
+            padding: 15px;
+            margin-bottom: 20px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.4);
         }
 
-        /* بخش اطلاعات بدنی */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 15px;
+            gap: 10px;
             text-align: center;
-            margin-bottom: 20px;
         }
 
         .stat-box {
             background-color: #2c2c2c;
-            padding: 15px 10px;
+            padding: 10px;
             border-radius: 8px;
             border-bottom: 3px solid var(--accent-color);
             font-weight: bold;
+            font-size: 14px;
         }
 
-        .stat-label {
-            font-size: 12px;
-            color: #aaa;
-            display: block;
-            margin-bottom: 5px;
-        }
+        .stat-label { font-size: 11px; color: #aaa; display: block; }
 
-        /* لیست حرکات و تغذیه */
-        ul {
-            list-style-type: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        li {
+        .exercise-item {
             background-color: #262626;
             margin: 10px 0;
-            padding: 12px 15px;
+            padding: 12px;
             border-radius: 8px;
             border-right: 4px solid var(--accent-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .ex-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
             font-size: 15px;
         }
 
-        /* تاکید روی بخش‌های مهم تغذیه */
-        strong {
+        .pr-badge {
+            background-color: rgba(255, 152, 0, 0.2);
             color: var(--accent-color);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
         }
 
-        /* تنظیمات اختصاصی برای صفحه‌های کوچک موبایل */
-        @media (max-width: 400px) {
-            h1 { font-size: 20px; }
-            h2 { font-size: 18px; }
-            li { font-size: 14px; padding: 10px; }
+        .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
+
+        input[type="number"] {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 8px;
+            border-radius: 5px;
+            width: 70px;
+            text-align: center;
+            font-family: inherit;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-history {
+            background-color: #444;
+            color: #fff;
+        }
+
+        #loading {
+            text-align: center;
+            color: var(--accent-color);
+            font-weight: bold;
+            display: none;
+            margin: 10px 0;
+        }
+
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>🏋️ برنامه تمرینی و تغذیه</h1>
+        <h1>🏋️ تراکر تمرینی</h1>
         
         <div class="card">
             <div class="stats-grid">
-                <div class="stat-box">
-                    <span class="stat-label">قد</span>
-                    ۱۸۳ سانتی‌متر
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">وزن</span>
-                    ۷۶ کیلوگرم
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">تیپ بدنی</span>
-                    اکتومورف
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">هدف اصلی</span>
-                    افزایش حجم
-                </div>
+                <div class="stat-box"><span class="stat-label">قد / وزن</span>۱۸۳ / ۷۶</div>
+                <div class="stat-box"><span class="stat-label">تیپ بدنی</span>اکتومورف</div>
+                <div class="stat-box"><span class="stat-label">رژیم روزانه</span>۳۰۰۰ کالری / ۱۵۰g پروتئین</div>
             </div>
         </div>
 
+        <div id="loading">⏳ در حال ارتباط با دیتابیس...</div>
+
         <div class="card">
-            <h2>🔥 برنامه تمرینی (سیستم PPL)</h2>
-            
-            <h3>روز اول: فشار (Push) - سینه، سرشانه، پشت‌بازو</h3>
-            <ul>
-                <li>پرس سینه هالتر - ۴ ست ۸ تا ۱۰ تکرار</li>
-                <li>پرس بالاسینه دمبل - ۳ ست ۱۰ تا ۱۲ تکرار</li>
-                <li>قفسه سینه دستگاه یا کابل - ۳ ست ۱۲ تا ۱۵ تکرار</li>
-                <li>پرس سرشانه دمبل نشسته - ۳ ست ۱۰ تا ۱۲ تکرار</li>
-                <li>نشر جانب دمبل - ۴ ست ۱۲ تا ۱۵ تکرار</li>
-                <li>پشت بازو سیم‌کش با طناب - ۳ ست ۱۲ تا ۱۵ تکرار</li>
-            </ul>
-
-            <h3>روز دوم: کشش (Pull) - زیربغل، پشت، جلوبازو</h3>
-            <ul>
-                <li>بارفیکس یا لت سیم‌کش از جلو - ۴ ست ۸ تا ۱۲ تکرار</li>
-                <li>زیربغل هالتر خم - ۳ ست ۸ تا ۱۰ تکرار</li>
-                <li>قایقی سیم‌کش - ۳ ست ۱۰ تا ۱۲ تکرار</li>
-                <li>فیس‌پول (Face Pull) - ۳ ست ۱۲ تا ۱۵ تکرار</li>
-                <li>جلو بازو هالتر - ۳ ست ۱۰ تا ۱۲ تکرار</li>
-                <li>جلو بازو دمبل چکشی - ۳ ست ۱۲ تا ۱۵ تکرار</li>
-            </ul>
-
-            <h3>روز سوم: پا (Legs) - ران، همسترینگ، شکم</h3>
-            <ul>
-                <li>اسکوات با هالتر - ۴ ست ۸ تا ۱۰ تکرار</li>
-                <li>پرس پا دستگاه - ۳ ست ۱۰ تا ۱۲ تکرار</li>
-                <li>پشت ران دستگاه (Leg Curl) - ۳ ست ۱۲ تکرار</li>
-                <li>جلو ران دستگاه (Leg Extension) - ۳ ست ۱۲ تا ۱۵ تکرار</li>
-                <li>ساق پا ایستاده دستگاه - ۴ ست ۱۵ تا ۲۰ تکرار</li>
-                <li>کرانچ شکم - ۳ ست ۲۰ تکرار</li>
-            </ul>
+            <h2>🔥 روز اول: فشار (Push)</h2>
+            <div id="push-workout"></div>
         </div>
 
         <div class="card">
-            <h2>🍗 برنامه تغذیه (اقتصادی دانشجویی)</h2>
-            <p style="text-align:center; color: #aaa; font-size: 14px;">هدف روزانه: ۳۰۰۰ کالری | ۱۵۰ گرم پروتئین</p>
-            <ul>
-                <li><strong>صبحانه:</strong> اوتمیل (جو دوسر + شیر) + تخم‌مرغ آب‌پز</li>
-                <li><strong>ناهار:</strong> سینه مرغ + برنج (منبع کربوهیدرات عالی و مقرون‌به‌صرفه)</li>
-                <li><strong>شام / بعد تمرین:</strong> ماکارونی با سویا (بمب کربوهیدرات و پروتئین گیاهی)</li>
-                <li><strong>نکات مهم:</strong> پرهیز از مکمل‌های غیرضروری مثل BCAA برای مدیریت بودجه. در صورت نیاز، پودر آب پنیر یا کراتین مونوهیدرات به عنوان مکمل اضافه شود.</li>
-            </ul>
+            <h2>🔥 روز دوم: کشش (Pull)</h2>
+            <div id="pull-workout"></div>
+        </div>
+
+        <div class="card">
+            <h2>🔥 روز سوم: پا (Legs)</h2>
+            <div id="legs-workout"></div>
         </div>
     </div>
 
+    <script type="module">
+        // اتصال به دیتابیس فایربیس با استفاده از کلیدهای شما
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBC_NPNDbO0E9SMROfMlmlgYh54Eb_YpJs",
+            authDomain: "workouttracker-bee8d.firebaseapp.com",
+            projectId: "workouttracker-bee8d",
+            storageBucket: "workouttracker-bee8d.firebasestorage.app",
+            messagingSenderId: "759044419558",
+            appId: "1:759044419558:web:af645ff69336f3a102f027"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const userDocRef = doc(db, "users", "my_data"); // آدرس ذخیره اطلاعات در دیتابیس
+
+        // لیست حرکات
+        const workouts = {
+            push: [
+                {id: 'benchpress', name: 'پرس سینه هالتر (۴ ست ۸-۱۰)'},
+                {id: 'incline_db', name: 'پرس بالاسینه دمبل (۳ ست ۱۰-۱۲)'},
+                {id: 'chest_fly', name: 'قفسه سینه دستگاه (۳ ست ۱۲-۱۵)'},
+                {id: 'shoulder_press', name: 'پرس سرشانه دمبل (۳ ست ۱۰-۱۲)'},
+                {id: 'lat_raise', name: 'نشر جانب دمبل (۴ ست ۱۲-۱۵)'},
+                {id: 'tricep_push', name: 'پشت بازو سیم‌کش (۳ ست ۱۲-۱۵)'}
+            ],
+            pull: [
+                {id: 'pullup', name: 'بارفیکس / لت (۴ ست ۸-۱۲)'},
+                {id: 'barbell_row', name: 'زیربغل هالتر خم (۳ ست ۸-۱۰)'},
+                {id: 'cable_row', name: 'قایقی سیم‌کش (۳ ست ۱۰-۱۲)'},
+                {id: 'facepull', name: 'فیس‌پول (۳ ست ۱۲-۱۵)'},
+                {id: 'bb_curl', name: 'جلو بازو هالتر (۳ ست ۱۰-۱۲)'},
+                {id: 'hammer_curl', name: 'جلو بازو دمبل چکشی (۳ ست ۱۲-۱۵)'}
+            ],
+            legs: [
+                {id: 'squat', name: 'اسکوات با هالتر (۴ ست ۸-۱۰)'},
+                {id: 'leg_press', name: 'پرس پا دستگاه (۳ ست ۱۰-۱۲)'},
+                {id: 'leg_curl', name: 'پشت ران دستگاه (۳ ست ۱۲)'},
+                {id: 'leg_ext', name: 'جلو ران دستگاه (۳ ست ۱۲-۱۵)'},
+                {id: 'calf_raise', name: 'ساق پا ایستاده (۴ ست ۱۵-۲۰)'},
+                {id: 'crunch', name: 'کرانچ شکم (۳ ست ۲۰)'}
+            ]
+        };
+
+        // تولید ظاهر حرکات در سایت
+        function renderWorkouts() {
+            for (const day in workouts) {
+                const container = document.getElementById(`${day}-workout`);
+                workouts[day].forEach(ex => {
+                    container.innerHTML += `
+                        <div class="exercise-item">
+                            <div class="ex-header">
+                                <span>${ex.name}</span>
+                                <span class="pr-badge">PR: <span id="pr-${ex.id}">0</span> kg</span>
+                            </div>
+                            <div class="controls">
+                                <input type="number" id="input-${ex.id}" placeholder="وزن(kg)">
+                                <button onclick="window.saveRecord('${ex.id}')">ثبت</button>
+                                <button class="btn-history" onclick="window.showHistory('${ex.id}', '${ex.name}')">تایخچه</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        // بارگذاری رکوردها از دیتابیس
+        async function loadData() {
+            document.getElementById('loading').style.display = 'block';
+            try {
+                const docSnap = await getDoc(userDocRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    for (const day in workouts) {
+                        workouts[day].forEach(ex => {
+                            if(data[ex.id]) {
+                                document.getElementById(`pr-${ex.id}`).innerText = data[ex.id].pr || 0;
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("خطا در دریافت اطلاعات:", error);
+            }
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // تابع ثبت رکورد جدید
+        window.saveRecord = async (exId) => {
+            const weightVal = document.getElementById(`input-${exId}`).value;
+            if(!weightVal) {
+                alert('لطفاً اول وزنی که زدی رو بنویس!');
+                return;
+            }
+            const weight = parseFloat(weightVal);
+            
+            document.getElementById('loading').style.display = 'block';
+            try {
+                const docSnap = await getDoc(userDocRef);
+                let allData = docSnap.exists() ? docSnap.data() : {};
+                let exData = allData[exId] || { pr: 0, history: [] };
+
+                // محاسبه بهترین رکورد
+                const newPr = Math.max(exData.pr, weight);
+                exData.pr = newPr;
+                
+                // اضافه کردن به تاریخچه (ثبت تاریخ و وزن)
+                const dateString = new Date().toLocaleDateString('fa-IR');
+                exData.history.push({ date: dateString, weight: weight });
+                
+                allData[exId] = exData;
+
+                // ذخیره در فایربیس
+                await setDoc(userDocRef, allData, { merge: true });
+
+                // آپدیت ظاهر سایت
+                document.getElementById(`pr-${exId}`).innerText = newPr;
+                document.getElementById(`input-${exId}`).value = '';
+                alert('عالی بود! رکوردت با موفقیت ذخیره شد. 💪');
+
+            } catch (error) {
+                alert('ارتباط با دیتابیس برقرار نشد. اینترنتت رو چک کن.');
+            }
+            document.getElementById('loading').style.display = 'none';
+        };
+
+        // تابع نمایش تاریخچه
+        window.showHistory = async (exId, exName) => {
+            document.getElementById('loading').style.display = 'block';
+            try {
+                const docSnap = await getDoc(userDocRef);
+                if (docSnap.exists() && docSnap.data()[exId]) {
+                    const history = docSnap.data()[exId].history || [];
+                    if(history.length === 0) {
+                        alert('هنوز رکوردی برای این حرکت ثبت نکردی.');
+                    } else {
+                        // نمایش 10 رکورد آخر
+                        let msg = `تاریخچه تمرین ${exName}:\n\n`;
+                        history.slice(-10).forEach(record => {
+                            msg += `📅 ${record.date} : 🏋️ ${record.weight} کیلوگرم\n`;
+                        });
+                        alert(msg);
+                    }
+                } else {
+                    alert('هنوز رکوردی برای این حرکت ثبت نکردی.');
+                }
+            } catch (error) {
+                alert('خطا در دریافت تاریخچه.');
+            }
+            document.getElementById('loading').style.display = 'none';
+        };
+
+        // اجرای اولیه توابع
+        renderWorkouts();
+        loadData();
+    </script>
 </body>
-  </html>
-  
+</html>
