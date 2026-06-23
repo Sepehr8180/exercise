@@ -13,7 +13,7 @@
             --text-color: #e0e0e0;
             --accent-color: #ff9800;
             --border-radius: 12px;
-            --worked-out-bg: #2e7d32; /* رنگ سبز برای روزهای تمرین شده */
+            --worked-out-bg: #2e7d32;
             --selected-border: #ff9800;
         }
         
@@ -45,9 +45,9 @@
             background: #333; color: white; border: none; padding: 5px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;
         }
         .calendar-grid {
-            display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; dir: rtl; /* تقویم راست‌چین بماند */
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center;
         }
-        .calendar-wrapper { direction: rtl; } /* برای فارسی ماندن تقویم */
+        .calendar-wrapper { direction: rtl; } 
         
         .weekday { font-size: 11px; color: #aaa; font-weight: bold; padding-bottom: 5px; }
         .day {
@@ -85,14 +85,13 @@
 
         #loading { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: var(--accent-color); padding: 5px 10px; border-radius: 5px; font-size: 12px; display: none; z-index: 1000;}
         
-        /* Chart Container */
         .chart-container { position: relative; height: 250px; width: 100%; margin-top: 20px;}
     </style>
 </head>
 <body>
 
     <div class="container">
-        <div id="loading">⏳ Syncing with Database...</div>
+        <div id="loading">⏳ Syncing...</div>
         
         <h3>🗓️ Training Calendar</h3>
         
@@ -118,15 +117,15 @@
                 <button class="routine-btn" id="btn-push" onclick="selectRoutine('push')">Push</button>
                 <button class="routine-btn" id="btn-pull" onclick="selectRoutine('pull')">Pull</button>
                 <button class="routine-btn" id="btn-legs" onclick="selectRoutine('legs')">Legs</button>
-                <button class="routine-btn" id="btn-rest" onclick="selectRoutine('rest')">Rest</button>
+                <button class="routine-btn" id="btn-rest" onclick="selectRoutine('rest')">Rest / Clear</button>
             </div>
         </div>
 
         <div id="workout-section" style="display: none;">
             <div class="card">
-                <h2>🏋️ Workout Details</h2>
+                <h2 id="section-workout-title">🏋️ Workout Details</h2>
                 <div id="exercises-container"></div>
-                <button class="btn-main" onclick="saveTodayWorkout()">💾 Save Daily Workout</button>
+                <button class="btn-main" id="btn-save-main" onclick="saveTodayWorkout()">💾 Save Daily Workout</button>
             </div>
         </div>
 
@@ -140,7 +139,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBC_NPNDbO0E9SMROfMlmlgYh54Eb_YpJs",
@@ -154,31 +153,31 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Workout data with target reps
         const workoutData = {
             push: [
-                {id: 'benchpress', name: 'Barbell Bench Press', sets: 4, target: '8-10 reps'},
-                {id: 'incline_db', name: 'Incline DB Press', sets: 3, target: '10-12 reps'},
-                {id: 'chest_fly', name: 'Machine/Cable Chest Fly', sets: 3, target: '12-15 reps'},
-                {id: 'shoulder_press', name: 'Seated DB Shoulder Press', sets: 3, target: '10-12 reps'},
-                {id: 'lat_raise', name: 'DB Lateral Raise', sets: 4, target: '12-15 reps'},
-                {id: 'tricep_push', name: 'Cable Tricep Pushdown', sets: 3, target: '12-15 reps'}
+                {id: 'benchpress', name: 'Barbell Bench Press', sets: 4, target: '8-10 reps', type: 'weight-rep'},
+                {id: 'incline_db', name: 'Incline DB Press', sets: 3, target: '10-12 reps', type: 'weight-rep'},
+                {id: 'chest_fly', name: 'Machine/Cable Chest Fly', sets: 3, target: '12-15 reps', type: 'weight-rep'},
+                {id: 'shoulder_press', name: 'Seated DB Shoulder Press', sets: 3, target: '10-12 reps', type: 'weight-rep'},
+                {id: 'lat_raise', name: 'DB Lateral Raise', sets: 4, target: '12-15 reps', type: 'weight-rep'},
+                {id: 'tricep_push', name: 'Cable Tricep Pushdown', sets: 3, target: '12-15 reps', type: 'weight-rep'}
             ],
             pull: [
-                {id: 'pullup', name: 'Pull-up / Lat Pulldown', sets: 4, target: '8-12 reps'},
-                {id: 'barbell_row', name: 'Barbell Row', sets: 3, target: '8-10 reps'},
-                {id: 'cable_row', name: 'Seated Cable Row', sets: 3, target: '10-12 reps'},
-                {id: 'facepull', name: 'Face Pull', sets: 3, target: '12-15 reps'},
-                {id: 'bb_curl', name: 'Barbell Bicep Curl', sets: 3, target: '10-12 reps'},
-                {id: 'hammer_curl', name: 'DB Hammer Curl', sets: 3, target: '12-15 reps'}
+                {id: 'pullup', name: 'Pull-up', sets: 4, target: '8-12 reps', type: 'rep-only'},
+                {id: 'barbell_row', name: 'Barbell Row', sets: 3, target: '8-10 reps', type: 'weight-rep'},
+                {id: 'cable_row', name: 'Seated Cable Row', sets: 3, target: '10-12 reps', type: 'weight-rep'},
+                {id: 'facepull', name: 'Face Pull', sets: 3, target: '12-15 reps', type: 'weight-rep'},
+                {id: 'bb_curl', name: 'Barbell Bicep Curl', sets: 3, target: '10-12 reps', type: 'weight-rep'},
+                {id: 'hammer_curl', name: 'DB Hammer Curl', sets: 3, target: '12-15 reps', type: 'weight-rep'}
             ],
             legs: [
-                {id: 'squat', name: 'Barbell Squat', sets: 4, target: '8-10 reps'},
-                {id: 'leg_press', name: 'Leg Press Machine', sets: 3, target: '10-12 reps'},
-                {id: 'leg_curl', name: 'Leg Curl', sets: 3, target: '12 reps'},
-                {id: 'leg_ext', name: 'Leg Extension', sets: 3, target: '12-15 reps'},
-                {id: 'calf_raise', name: 'Standing Calf Raise', sets: 4, target: '15-20 reps'},
-                {id: 'crunch', name: 'Ab Crunches', sets: 3, target: '20 reps'}
+                {id: 'squat', name: 'Barbell Squat', sets: 4, target: '8-10 reps', type: 'weight-rep'},
+                {id: 'leg_press', name: 'Leg Press Machine', sets: 3, target: '10-12 reps', type: 'weight-rep'},
+                {id: 'leg_curl', name: 'Leg Curl', sets: 3, target: '12 reps', type: 'weight-rep'},
+                {id: 'leg_ext', name: 'Leg Extension', sets: 3, target: '12-15 reps', type: 'weight-rep'},
+                {id: 'calf_raise', name: 'Standing Calf Raise', sets: 4, target: '15-20 reps', type: 'weight-rep'},
+                {id: 'crunch', name: 'Ab Crunches', sets: 3, target: '20 reps', type: 'rep-only'},
+                {id: 'plank', name: 'Plank', sets: 3, target: 'Hold max time', type: 'time'}
             ]
         };
 
@@ -207,7 +206,6 @@
 
         function showLoading(show) { document.getElementById('loading').style.display = show ? 'block' : 'none'; }
 
-        // Fetch PRs and all saved dates/weights for the calendar and chart
         async function fetchAllData() {
             try {
                 const prSnap = await getDoc(doc(db, "totals", "prs"));
@@ -225,9 +223,7 @@
                     }
                 });
                 
-                // Sort by date for the chart
                 window.weightHistory.sort((a, b) => a.date.localeCompare(b.date));
-
             } catch (e) { console.error(e); }
         }
 
@@ -252,7 +248,7 @@
                 const dateStr = `${viewYear}-${String(viewMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 let classes = 'day';
                 
-                if (savedDatesList.includes(dateStr)) classes += ' has-data'; // رنگ متمایز روزهای تمرینی
+                if (savedDatesList.includes(dateStr)) classes += ' has-data';
                 if (dateStr === selectedDateStr) classes += ' selected';
 
                 grid.innerHTML += `<div class="${classes}" onclick="window.selectDate(${viewYear},${viewMonth},${d})">${d}</div>`;
@@ -298,13 +294,15 @@
 
             const container = document.getElementById('exercises-container');
             container.innerHTML = '';
+            document.getElementById('workout-section').style.display = 'block';
 
             if (routineType === 'rest') {
-                document.getElementById('workout-section').style.display = 'none';
+                container.innerHTML = '<p style="text-align:center; color:#aaa; margin: 20px 0;">Rest Day selected. Click the button below to clear any saved exercises for this day and reset calendar color.</p>';
+                document.getElementById('btn-save-main').innerText = '🔄 Clear Day / Save Rest';
                 return;
             }
 
-            document.getElementById('workout-section').style.display = 'block';
+            document.getElementById('btn-save-main').innerText = '💾 Save Daily Workout';
             const exercises = workoutData[routineType] || [];
 
             exercises.forEach(ex => {
@@ -312,17 +310,45 @@
                 const savedSets = savedExercises && savedExercises[ex.id] ? savedExercises[ex.id] : [];
                 const currentPr = globalPrs[ex.id] || 0;
 
+                let prText = `🏆 PR: ${currentPr} kg`;
+                if(ex.type === 'rep-only') prText = `🏆 PR: ${currentPr} reps`;
+                if(ex.type === 'time') {
+                    const m = Math.floor(currentPr / 60);
+                    const s = currentPr % 60;
+                    prText = `🏆 PR: ${m}m ${s}s`;
+                }
+
                 for (let s = 1; s <= ex.sets; s++) {
-                    const savedW = savedSets[s-1]?.w || '';
-                    const savedR = savedSets[s-1]?.r || '';
-                    
-                    setInputsHtml += `
-                        <div class="set-row">
-                            <span>Set ${s}</span>
-                            <input type="number" id="w-${ex.id}-${s}" placeholder="kg" value="${savedW}">
-                            <input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}">
-                        </div>
-                    `;
+                    if (ex.type === 'time') {
+                        const savedMin = savedSets[s-1]?.min || '';
+                        const savedSec = savedSets[s-1]?.sec || '';
+                        setInputsHtml += `
+                            <div class="set-row">
+                                <span>Set ${s}</span>
+                                <input type="number" id="min-${ex.id}-${s}" placeholder="min" value="${savedMin}">
+                                <input type="number" id="sec-${ex.id}-${s}" placeholder="sec" value="${savedSec}">
+                            </div>
+                        `;
+                    } else if (ex.type === 'rep-only') {
+                        const savedR = savedSets[s-1]?.r || '';
+                        setInputsHtml += `
+                            <div class="set-row">
+                                <span>Set ${s}</span>
+                                <div style="text-align:center; color:#666; font-size:12px;">Bodyweight</div>
+                                <input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}">
+                            </div>
+                        `;
+                    } else {
+                        const savedW = savedSets[s-1]?.w || '';
+                        const savedR = savedSets[s-1]?.r || '';
+                        setInputsHtml += `
+                            <div class="set-row">
+                                <span>Set ${s}</span>
+                                <input type="number" id="w-${ex.id}-${s}" placeholder="kg" value="${savedW}">
+                                <input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}">
+                            </div>
+                        `;
+                    }
                 }
 
                 container.innerHTML += `
@@ -330,7 +356,7 @@
                         <div class="ex-header">
                             <span class="ex-title">${ex.name}</span>
                             <span class="ex-target">🎯 Target: ${ex.target}</span>
-                            <span class="pr-info">🏆 All-time PR: ${currentPr} kg</span>
+                            <span class="pr-info">${prText}</span>
                         </div>
                         ${setInputsHtml}
                     </div>
@@ -341,62 +367,88 @@
         window.saveTodayWorkout = async () => {
             showLoading(true);
 
+            if (currentRoutine === 'rest') {
+                try {
+                    await deleteDoc(doc(db, "daily_logs", selectedDateStr));
+                    await fetchAllData();
+                    renderCalendar();
+                    renderChart();
+                    document.getElementById('daily-body-weight').value = '';
+                    document.getElementById('workout-section').style.display = 'none';
+                    document.querySelectorAll('.routine-btn').forEach(b => b.classList.remove('active'));
+                    alert('Day data cleared from server successfully! 🔄');
+                } catch(e) { alert('Error clearing data.'); }
+                showLoading(false);
+                return;
+            }
+
             let logData = {
-                routine: currentRoutine || 'rest',
+                routine: currentRoutine,
                 bodyWeight: document.getElementById('daily-body-weight').value || null,
                 exercises: {}
             };
 
             let prUpdated = false;
+            const exercises = workoutData[currentRoutine] || [];
 
-            if (currentRoutine && currentRoutine !== 'rest') {
-                const exercises = workoutData[currentRoutine] || [];
-                exercises.forEach(ex => {
-                    logData.exercises[ex.id] = [];
-                    for (let s = 1; s <= ex.sets; s++) {
+            exercises.forEach(ex => {
+                logData.exercises[ex.id] = [];
+                for (let s = 1; s <= ex.sets; s++) {
+                    if (ex.type === 'time') {
+                        const min = document.getElementById(`min-${ex.id}-${s}`).value;
+                        const sec = document.getElementById(`sec-${ex.id}-${s}`).value;
+                        if (min || sec) {
+                            logData.exercises[ex.id].push({ min: min, sec: sec });
+                            const totalSec = (parseFloat(min) || 0) * 60 + (parseFloat(sec) || 0);
+                            if (totalSec > (globalPrs[ex.id] || 0)) {
+                                globalPrs[ex.id] = totalSec;
+                                prUpdated = true;
+                            }
+                        }
+                    } else if (ex.type === 'rep-only') {
+                        const r = document.getElementById(`r-${ex.id}-${s}`).value;
+                        if (r) {
+                            logData.exercises[ex.id].push({ r: r });
+                            const repNum = parseFloat(r) || 0;
+                            if (repNum > (globalPrs[ex.id] || 0)) {
+                                globalPrs[ex.id] = repNum;
+                                prUpdated = true;
+                            }
+                        }
+                    } else {
                         const w = document.getElementById(`w-${ex.id}-${s}`).value;
                         const r = document.getElementById(`r-${ex.id}-${s}`).value;
-                        
                         if (w || r) {
-                            const weightNum = parseFloat(w) || 0;
                             logData.exercises[ex.id].push({ w: w, r: r });
-
+                            const weightNum = parseFloat(w) || 0;
                             if (weightNum > (globalPrs[ex.id] || 0)) {
                                 globalPrs[ex.id] = weightNum;
                                 prUpdated = true;
                             }
                         }
                     }
-                });
-            }
+                }
+            });
 
             try {
                 await setDoc(doc(db, "daily_logs", selectedDateStr), logData);
                 if (prUpdated) await setDoc(doc(db, "totals", "prs"), globalPrs);
                 
-                // بروزرسانی زنده اطلاعات بدون رفرش صفحه
                 await fetchAllData(); 
                 renderCalendar();
                 renderChart();
 
-                alert('Workout & Weight Saved Successfully! 💪');
-            } catch (e) {
-                alert('Error saving data. Check your connection.');
-                console.error(e);
-            }
+                alert('Workout Details & Weight Saved! 💪');
+            } catch (e) { alert('Error saving data.'); console.error(e); }
             showLoading(false);
         };
 
         function renderChart() {
-            // گرفتن اطلاعات ۳ ماه اخیر
-            const labels = window.weightHistory.slice(-90).map(item => item.date.substring(5)); // فقط نمایش ماه و روز
+            const labels = window.weightHistory.slice(-90).map(item => item.date.substring(5));
             const dataPoints = window.weightHistory.slice(-90).map(item => item.weight);
 
             const ctx = document.getElementById('weightChart').getContext('2d');
-            
-            if (weightChartInstance) {
-                weightChartInstance.destroy();
-            }
+            if (weightChartInstance) weightChartInstance.destroy();
 
             weightChartInstance = new Chart(ctx, {
                 type: 'line',
@@ -411,19 +463,22 @@
                         pointBackgroundColor: '#fff',
                         pointBorderColor: '#ff9800',
                         pointRadius: 4,
-                        tension: 0.2, // انحنای خطوط
+                        tension: 0.2,
                         fill: true
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { labels: { color: '#e0e0e0' } }
-                    },
+                    plugins: { legend: { labels: { color: '#e0e0e0' } } },
                     scales: {
                         x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
-                        y: { ticks: { color: '#aaa' }, grid: { color: '#333' } }
+                        y: { 
+                            min: 68, 
+                            max: 80, 
+                            ticks: { color: '#aaa' }, 
+                            grid: { color: '#333' } 
+                        }
                     }
                 }
             });
