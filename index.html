@@ -4,16 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Workout Tracker</title>
+    <!-- Favicon Shortcut -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏋️</text></svg>">
+    <!-- Jalaali Date Library -->
     <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.js"></script>
+    <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bg-color: #121212;
             --card-bg: #1e1e1e;
             --text-color: #e0e0e0;
-            --accent-color: #ff9800;
-            --secondary-muscle-color: #2196f3;
+            --accent-color: #ff0000; /* قرمز برای عضله اصلی مثل ماسل ویکی */
+            --secondary-muscle: #ffb300; /* نارنجی/زرد برای عضله کمکی */
+            --default-muscle: #e2e8f0; /* خاکستری روشن برای عضلات درگیر نشده */
+            --muscle-stroke: #94a3b8;
             --border-radius: 12px;
             --worked-out-bg: #2e7d32;
             --selected-border: #ff9800;
@@ -29,7 +34,7 @@
         }
 
         .container { max-width: 600px; margin: 0 auto; padding-bottom: 30px; }
-        h1, h2, h3 { color: var(--accent-color); text-align: center; margin: 10px 0; }
+        h1, h2, h3 { color: #ff9800; text-align: center; margin: 10px 0; }
         
         .card {
             background-color: var(--card-bg);
@@ -40,80 +45,56 @@
         }
 
         /* Calendar Styles */
-        .calendar-header {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
-        }
-        .calendar-header button {
-            background: #333; color: white; border: none; padding: 5px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;
-        }
-        .calendar-grid {
-            display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center;
-        }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .calendar-header button { background: #333; color: white; border: none; padding: 5px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
         .calendar-wrapper { direction: rtl; } 
         
         .weekday { font-size: 11px; color: #aaa; font-weight: bold; padding-bottom: 5px; }
-        .day {
-            background-color: #262626; padding: 8px 0; border-radius: 6px; font-size: 14px; cursor: pointer; border: 2px solid transparent;
-        }
+        .day { background-color: #262626; padding: 8px 0; border-radius: 6px; font-size: 14px; cursor: pointer; border: 2px solid transparent; }
         .day.selected { border: 2px solid var(--selected-border); }
         .day.has-data { background-color: var(--worked-out-bg); color: white; font-weight: bold; }
 
         /* Routine Selector & Inputs */
         .routine-selector { display: flex; justify-content: space-between; gap: 8px; margin: 15px 0; }
-        .routine-btn {
-            flex: 1; background-color: #333; color: white; border: none; padding: 10px 5px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px;
-        }
-        .routine-btn.active { background-color: var(--accent-color); color: black; }
+        .routine-btn { flex: 1; background-color: #333; color: white; border: none; padding: 10px 5px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .routine-btn.active { background-color: #ff9800; color: black; }
 
-        .weight-input-group {
-            display: flex; justify-content: space-between; align-items: center; background: #262626; padding: 10px; border-radius: 8px; margin-bottom: 15px;
-        }
+        .weight-input-group { display: flex; justify-content: space-between; align-items: center; background: #262626; padding: 10px; border-radius: 8px; margin-bottom: 15px; }
         .weight-input-group input { width: 80px; text-align: center; }
 
-        /* Anatomy Map Styles */
-        .anatomy-box {
-            display: flex; justify-content: center; background: #1a1a1a; padding: 10px; border-radius: 8px; margin-bottom: 15px; gap: 20px;
-        }
-        .anatomy-box svg { width: 120px; height: 200px; }
-        .muscle { fill: #3a3a3a; transition: fill 0.3s ease; }
-        .muscle-label-container {
-            display: flex; flex-direction: column; justify-content: center; font-size: 11px; gap: 5px;
-        }
-        .indicator-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+        /* Advanced Anatomy Map Styles */
+        .anatomy-container { background: #f8fafc; padding: 15px 5px; border-radius: 8px; margin-bottom: 15px; }
+        .anatomy-box { display: flex; justify-content: space-around; align-items: center; }
+        .anatomy-box svg { width: 45%; max-height: 250px; drop-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .muscle-path { fill: var(--default-muscle); stroke: var(--muscle-stroke); stroke-width: 1.2; stroke-linejoin: round; transition: fill 0.3s ease; }
+        
+        .legend-box { display: flex; justify-content: center; gap: 15px; margin-top: 10px; font-size: 12px; color: #333; font-weight: bold; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
 
         /* Sets Table */
-        .exercise-card { 
-            background-color: #262626; border-radius: 8px; padding: 12px; margin-bottom: 12px; 
-            border-left: 4px solid transparent; cursor: pointer; transition: all 0.2s ease;
-        }
-        .exercise-card.active-ex { border-left-color: var(--accent-color); background-color: #2d2d2d; }
+        .exercise-card { background-color: #262626; border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 4px solid transparent; cursor: pointer; transition: all 0.2s ease; }
+        .exercise-card.active-ex { border-left-color: #ff9800; background-color: #2d2d2d; }
         .ex-header { display: flex; flex-direction: column; margin-bottom: 10px; }
         .ex-title { font-weight: bold; font-size: 15px; }
         .ex-target { font-size: 12px; color: #aaa; margin-top: 3px; }
-        .pr-info { font-size: 11px; color: var(--accent-color); font-weight: bold; margin-top: 3px; }
+        .pr-info { font-size: 11px; color: #ff9800; font-weight: bold; margin-top: 3px; }
         
         .set-row { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 8px; align-items: center; margin-bottom: 6px; }
         .set-row span { font-size: 12px; color: #ccc; }
-        input[type="number"] {
-            background-color: #333; color: white; border: 1px solid #555; padding: 8px; border-radius: 4px; text-align: center; width: 100%; box-sizing: border-box; font-family: Arial;
-        }
+        input[type="number"] { background-color: #333; color: white; border: 1px solid #555; padding: 8px; border-radius: 4px; text-align: center; width: 100%; box-sizing: border-box; font-family: Arial; }
 
-        .ex-note {
-            font-size: 11px; color: #888; text-align: center; margin-top: 10px; font-style: italic; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 5px;
-        }
+        .ex-note { font-size: 11px; color: #999; text-align: left; margin-top: 10px; font-style: italic; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 5px; border-left: 2px solid #555;}
 
-        .btn-main { background-color: var(--accent-color); color: black; border: none; width: 100%; padding: 14px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
-
-        #loading { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: var(--accent-color); padding: 5px 10px; border-radius: 5px; font-size: 12px; display: none; z-index: 1000;}
-        
+        .btn-main { background-color: #ff9800; color: black; border: none; width: 100%; padding: 14px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        #loading { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: #ff9800; padding: 5px 10px; border-radius: 5px; font-size: 12px; display: none; z-index: 1000;}
         .chart-container { position: relative; height: 250px; width: 100%; margin-top: 20px;}
     </style>
 </head>
 <body>
-
     <div class="container">
         <div id="loading">⏳ Syncing...</div>
-        
         <h3>🗓️ Training Calendar</h3>
         
         <div class="card calendar-wrapper">
@@ -127,12 +108,10 @@
 
         <div class="card">
             <h2 id="selected-date-title">No Date Selected</h2>
-            
             <div class="weight-input-group">
                 <label style="font-weight: bold; font-size: 14px;">⚖️ Body Weight (kg):</label>
                 <input type="number" id="daily-body-weight" step="0.1" placeholder="e.g. 76.5">
             </div>
-
             <p style="text-align: center; font-size: 13px; color: #aaa; margin: 0;">Select Routine:</p>
             <div class="routine-selector">
                 <button class="routine-btn" id="btn-push" onclick="selectRoutine('push')">Push</button>
@@ -143,40 +122,58 @@
         </div>
 
         <div id="workout-section" style="display: none;">
-            <div class="card">
-                <h2>Anatomy Muscle Map</h2>
+            <div class="card anatomy-container">
+                <h2 style="color:#333; margin-top:0;">Target Muscles</h2>
                 <div class="anatomy-box">
-                    <svg viewBox="0 0 100 200">
-                        <text x="50" y="15" fill="#888" font-size="10" text-anchor="middle">FRONT</text>
-                        <circle cx="50" cy="35" r="12" fill="#3a3a3a"/>
-                        <rect class="muscle" id="m-front-shoulders-l" x="24" y="52" width="10" height="12" rx="4"/>
-                        <rect class="muscle" id="m-front-shoulders-r" x="66" y="52" width="10" height="12" rx="4"/>
-                        <rect class="muscle" id="m-front-chest" x="36" y="52" width="28" height="20" rx="3"/>
-                        <rect class="muscle" id="m-front-biceps-l" x="22" y="66" width="9" height="18" rx="2"/>
-                        <rect class="muscle" id="m-front-biceps-r" x="69" y="66" width="9" height="18" rx="2"/>
-                        <rect class="muscle" id="m-front-abs" x="38" y="75" width="24" height="30" rx="3"/>
-                        <rect class="muscle" id="m-front-quads-l" x="37" y="112" width="11" height="40" rx="4"/>
-                        <rect class="muscle" id="m-front-quads-r" x="52" y="112" width="11" height="40" rx="4"/>
+                    <!-- High-Quality Front Anatomy -->
+                    <svg viewBox="0 0 100 180">
+                        <text x="50" y="10" fill="#64748b" font-size="8" font-weight="bold" text-anchor="middle">FRONT</text>
+                        <defs>
+                            <g id="front-half">
+                                <path class="muscle-path m-neck" d="M 50,15 C 55,15 57,18 57,24 C 57,30 54,33 50,34 Z"/>
+                                <path class="muscle-path m-traps" d="M 50,34 C 53,34 56,35 62,38 L 50,38 Z"/>
+                                <path class="muscle-path m-delts-front" d="M 62,38 C 72,40 76,46 74,56 C 72,60 69,56 69,48 C 68,42 64,38 62,38 Z"/>
+                                <path class="muscle-path m-chest" d="M 50,38 C 64,38 68,42 69,48 C 69,56 58,60 50,60 Z"/>
+                                <path class="muscle-path m-biceps" d="M 69,56 C 74,60 76,70 72,78 C 68,78 66,66 69,56 Z"/>
+                                <path class="muscle-path m-forearms" d="M 72,78 C 76,82 78,95 72,105 C 68,100 68,85 72,78 Z"/>
+                                <path class="muscle-path m-abs" d="M 50,60 L 56,60 C 56,70 55,85 50,88 Z"/>
+                                <path class="muscle-path m-obliques" d="M 56,60 C 63,65 65,78 61,86 L 50,88 L 55,85 Z"/>
+                                <path class="muscle-path m-quads" d="M 50,88 L 61,86 C 65,95 68,110 62,130 C 58,135 54,135 52,135 C 52,110 50,100 50,88 Z"/>
+                                <path class="muscle-path m-calves" d="M 51,142 C 58,145 60,160 56,175 C 53,175 50,160 50,142 Z"/>
+                            </g>
+                        </defs>
+                        <use href="#front-half" />
+                        <use href="#front-half" transform="scale(-1, 1) translate(-100, 0)" />
                     </svg>
-                    <svg viewBox="0 0 100 200">
-                        <text x="50" y="15" fill="#888" font-size="10" text-anchor="middle">BACK</text>
-                        <circle cx="50" cy="35" r="12" fill="#3a3a3a"/>
-                        <rect class="muscle" id="m-back-shoulders-l" x="24" y="52" width="10" height="12" rx="4"/>
-                        <rect class="muscle" id="m-back-shoulders-r" x="66" y="52" width="10" height="12" rx="4"/>
-                        <path class="muscle" id="m-back-lats" d="M36,52 L64,52 L58,85 L42,85 Z"/>
-                        <rect class="muscle" id="m-back-triceps-l" x="21" y="66" width="9" height="20" rx="2"/>
-                        <rect class="muscle" id="m-back-triceps-r" x="70" y="66" width="9" height="20" rx="2"/>
-                        <rect class="muscle" id="m-back-hamstrings-l" x="37" y="112" width="11" height="38" rx="4"/>
-                        <rect class="muscle" id="m-back-hamstrings-r" x="52" y="112" width="11" height="38" rx="4"/>
-                        <rect class="muscle" id="m-back-calves-l" x="38" y="154" width="10" height="25" rx="3"/>
-                        <rect class="muscle" id="m-back-calves-r" x="52" y="154" width="10" height="25" rx="3"/>
-                    </svg>
-                    <div class="muscle-label-container">
-                        <div><span class="indicator-dot" style="background:var(--accent-color)"></span>Primary</div>
-                        <div><span class="indicator-dot" style="background:var(--secondary-muscle-color)"></span>Secondary</div>
-                    </div>
-                </div>
 
+                    <!-- High-Quality Back Anatomy -->
+                    <svg viewBox="0 0 100 180">
+                        <text x="50" y="10" fill="#64748b" font-size="8" font-weight="bold" text-anchor="middle">BACK</text>
+                        <defs>
+                            <g id="back-half">
+                                <path class="muscle-path m-neck" d="M 50,15 C 55,15 57,18 57,24 C 57,30 54,33 50,34 Z"/>
+                                <path class="muscle-path m-traps" d="M 50,34 C 54,34 57,35 62,38 C 58,45 54,50 50,52 Z"/>
+                                <path class="muscle-path m-delts-rear" d="M 62,38 C 72,40 76,46 74,56 C 72,60 69,56 65,48 C 64,42 62,38 62,38 Z"/>
+                                <path class="muscle-path m-lats" d="M 50,52 C 54,50 58,45 62,38 C 70,48 70,65 60,75 C 56,78 53,78 50,78 Z"/>
+                                <path class="muscle-path m-triceps" d="M 69,56 C 74,60 76,70 72,78 C 68,78 66,66 69,56 Z"/>
+                                <path class="muscle-path m-forearms" d="M 72,78 C 76,82 78,95 72,105 C 68,100 68,85 72,78 Z"/>
+                                <path class="muscle-path m-lower-back" d="M 50,78 C 53,78 56,78 60,75 C 58,85 54,90 50,90 Z"/>
+                                <path class="muscle-path m-glutes" d="M 50,90 C 54,90 58,85 62,90 C 64,100 58,105 50,105 Z"/>
+                                <path class="muscle-path m-hamstrings" d="M 50,105 C 58,105 64,100 64,115 C 64,125 58,135 54,135 C 54,125 50,115 50,105 Z"/>
+                                <path class="muscle-path m-calves" d="M 51,142 C 58,145 60,160 56,175 C 53,175 50,160 50,142 Z"/>
+                            </g>
+                        </defs>
+                        <use href="#back-half" />
+                        <use href="#back-half" transform="scale(-1, 1) translate(-100, 0)" />
+                    </svg>
+                </div>
+                <div class="legend-box">
+                    <div class="legend-item"><div class="dot" style="background:var(--accent-color)"></div>Primary</div>
+                    <div class="legend-item"><div class="dot" style="background:var(--secondary-muscle)"></div>Secondary</div>
+                </div>
+            </div>
+
+            <div class="card">
                 <h2 id="section-workout-title">🏋️ Workout Details</h2>
                 <div id="exercises-container"></div>
                 <button class="btn-main" id="btn-save-main" onclick="saveTodayWorkout()">💾 Save Daily Workout</button>
@@ -208,30 +205,31 @@
 
         const workoutData = {
             push: [
-                {id: 'bb_bench', name: 'Barbell Bench Press', sets: 4, target: '6-10 reps', type: 'weight-rep', note: 'Heavy load, touch chest lightly.', muscles: {primary: ['m-front-chest'], secondary: ['m-front-shoulders-l','m-front-shoulders-r','m-back-triceps-l','m-back-triceps-r']}},
-                {id: 'inc_db_press', name: 'Incline Dumbbell Press', sets: 3, target: '10-12 reps', type: 'weight-rep', note: 'Focus on upper chest volume.', muscles: {primary: ['m-front-chest'], secondary: ['m-front-shoulders-l','m-front-shoulders-r']}},
-                {id: 'arnold_press', name: 'Dumbbell Arnold Press', sets: 3, target: '10 reps', type: 'weight-rep', note: 'Full rotation for shoulder width.', muscles: {primary: ['m-front-shoulders-l','m-front-shoulders-r','m-back-shoulders-l','m-back-shoulders-r'], secondary: ['m-back-triceps-l','m-back-triceps-r']}},
-                {id: 'lat_raise', name: 'Lateral Raises (Dumbbell)', sets: 4, target: '15 reps', type: 'weight-rep', note: 'Strict form, no swinging.', muscles: {primary: ['m-front-shoulders-l','m-front-shoulders-r','m-back-shoulders-l','m-back-shoulders-r'], secondary: []}},
-                {id: 'tricep_push', name: 'Cable Tricep Pushdowns', sets: 3, target: '12-15 reps', type: 'weight-rep', note: 'Squeeze at the bottom.', muscles: {primary: ['m-back-triceps-l','m-back-triceps-r'], secondary: []}},
-                {id: 'bench_dips', name: 'Bench Dips', sets: 3, target: 'Failure', type: 'rep-only', note: 'Great for tricep endurance.', muscles: {primary: ['m-back-triceps-l','m-back-triceps-r'], secondary: ['m-front-chest']}}
+                {id: 'bb_bench', name: 'Barbell Bench Press', sets: 4, target: '6-10 reps', type: 'weight-rep', note: 'Heavy load, touch chest lightly.', muscles: {primary: ['m-chest'], secondary: ['m-delts-front','m-triceps']}},
+                {id: 'inc_db_press', name: 'Incline Dumbbell Press', sets: 3, target: '10-12 reps', type: 'weight-rep', note: 'Focus on upper chest volume.', muscles: {primary: ['m-chest'], secondary: ['m-delts-front']}},
+                {id: 'arnold_press', name: 'Dumbbell Arnold Press', sets: 3, target: '10 reps', type: 'weight-rep', note: 'Full rotation for shoulder width.', muscles: {primary: ['m-delts-front'], secondary: ['m-triceps']}},
+                {id: 'lat_raise', name: 'Lateral Raises (Dumbbell)', sets: 4, target: '15 reps', type: 'weight-rep', note: 'Strict form, no swinging.', muscles: {primary: ['m-delts-front', 'm-delts-rear'], secondary: []}},
+                {id: 'tricep_push', name: 'Cable Tricep Pushdowns', sets: 3, target: '12-15 reps', type: 'weight-rep', note: 'Squeeze at the bottom.', muscles: {primary: ['m-triceps'], secondary: []}},
+                {id: 'bench_dips', name: 'Bench Dips', sets: 3, target: 'Failure', type: 'rep-only', note: 'Great for tricep endurance.', muscles: {primary: ['m-triceps'], secondary: ['m-chest']}}
             ],
             pull: [
-                {id: 'lat_pull', name: 'Lat Pulldown', sets: 4, target: '10 reps', type: 'weight-rep', note: 'Pull with elbows, not hands.', muscles: {primary: ['m-back-lats'], secondary: ['m-front-biceps-l','m-front-biceps-r']}},
-                {id: 'db_row', name: 'One-Arm Dumbbell Row', sets: 3, target: '10 reps', type: 'weight-rep', note: 'Stretch the lat at the bottom.', muscles: {primary: ['m-back-lats'], secondary: ['m-front-biceps-l','m-front-biceps-r']}},
-                {id: 'facepull', name: 'Face Pulls (Cable)', sets: 3, target: '15 reps', type: 'weight-rep', note: 'Pull to face, hold for 1 sec.', muscles: {primary: ['m-back-shoulders-l','m-back-shoulders-r'], secondary: ['m-back-lats']}},
-                {id: 'db_pullover', name: 'Dumbbell Pullover', sets: 3, target: '12 reps', type: 'weight-rep', note: 'Expand the ribcage, slow tempo.', muscles: {primary: ['m-back-lats'], secondary: ['m-front-chest']}},
-                {id: 'ez_curl', name: 'EZ-Bar Bicep Curls', sets: 3, target: '10-12 reps', type: 'weight-rep', note: 'Squeeze biceps hard at top.', muscles: {primary: ['m-front-biceps-l','m-front-biceps-r'], secondary: []}},
-                {id: 'hammer_curl', name: 'Hammer Curls', sets: 3, target: '12 reps', type: 'weight-rep', note: 'Improves grip and arm thickness.', muscles: {primary: ['m-front-biceps-l','m-front-biceps-r'], secondary: []}}
+                {id: 'lat_pull', name: 'Lat Pulldown', sets: 4, target: '10 reps', type: 'weight-rep', note: 'Pull with elbows, not hands.', muscles: {primary: ['m-lats'], secondary: ['m-biceps']}},
+                {id: 'db_row', name: 'One-Arm Dumbbell Row', sets: 3, target: '10 reps', type: 'weight-rep', note: 'Stretch the lat at the bottom.', muscles: {primary: ['m-lats'], secondary: ['m-biceps','m-traps','m-lower-back']}},
+                {id: 'facepull', name: 'Face Pulls (Cable)', sets: 3, target: '15 reps', type: 'weight-rep', note: 'Pull to face, hold for 1 sec.', muscles: {primary: ['m-delts-rear','m-traps'], secondary: ['m-lats']}},
+                {id: 'db_pullover', name: 'Dumbbell Pullover', sets: 3, target: '12 reps', type: 'weight-rep', note: 'Expand the ribcage, slow tempo.', muscles: {primary: ['m-lats'], secondary: ['m-chest']}},
+                {id: 'ez_curl', name: 'EZ-Bar Bicep Curls', sets: 3, target: '10-12 reps', type: 'weight-rep', note: 'Squeeze biceps hard at top.', muscles: {primary: ['m-biceps'], secondary: ['m-forearms']}},
+                {id: 'hammer_curl', name: 'Hammer Curls', sets: 3, target: '12 reps', type: 'weight-rep', note: 'Improves grip and arm thickness.', muscles: {primary: ['m-biceps','m-forearms'], secondary: []}}
             ],
             legs: [
-                {id: 'bb_squat', name: 'Barbell Back Squat', sets: 4, target: '8-10 reps', type: 'weight-rep', note: 'Deep reps, chest up.', muscles: {primary: ['m-front-quads-l','m-front-quads-r'], secondary: ['m-back-hamstrings-l','m-back-hamstrings-r','m-front-abs']}},
-                {id: 'db_lunges', name: 'Dumbbell Lunges', sets: 3, target: '12/leg reps', type: 'weight-rep', note: 'Boosts balance and endurance.', muscles: {primary: ['m-front-quads-l','m-front-quads-r'], secondary: ['m-back-hamstrings-l','m-back-hamstrings-r']}},
-                {id: 'db_leg_curl', name: 'Dumbbell Leg Curls', sets: 3, target: '12-15 reps', type: 'weight-rep', note: 'Control weight on the way down.', muscles: {primary: ['m-back-hamstrings-l','m-back-hamstrings-r'], secondary: []}},
-                {id: 'calf_raise', name: 'Standing Calf Raises', sets: 4, target: '20 reps', type: 'weight-rep', note: 'Full stretch at the bottom.', muscles: {primary: ['m-back-calves-l','m-back-calves-r'], secondary: []}},
-                {id: 'lying_leg_raise', name: 'Lying Leg Raises', sets: 3, target: '15-20 reps', type: 'rep-only', note: 'Don’t let feet touch the floor.', muscles: {primary: ['m-front-abs'], secondary: []}},
-                {id: 'plank', name: 'Plank', sets: 3, target: 'Max', type: 'time', note: 'Total core stability.', muscles: {primary: ['m-front-abs'], secondary: ['m-front-quads-l','m-front-quads-r']}}
+                {id: 'bb_squat', name: 'Barbell Back Squat', sets: 4, target: '8-10 reps', type: 'weight-rep', note: 'Deep reps, chest up.', muscles: {primary: ['m-quads','m-glutes'], secondary: ['m-hamstrings','m-lower-back']}},
+                {id: 'db_lunges', name: 'Dumbbell Lunges', sets: 3, target: '12/leg reps', type: 'weight-rep', note: 'Boosts balance and endurance.', muscles: {primary: ['m-quads','m-glutes'], secondary: ['m-hamstrings']}},
+                {id: 'db_leg_curl', name: 'Dumbbell Leg Curls', sets: 3, target: '12-15 reps', type: 'weight-rep', note: 'Control weight on the way down.', muscles: {primary: ['m-hamstrings'], secondary: ['m-calves']}},
+                {id: 'calf_raise', name: 'Standing Calf Raises', sets: 4, target: '20 reps', type: 'weight-rep', note: 'Full stretch at the bottom.', muscles: {primary: ['m-calves'], secondary: []}},
+                {id: 'lying_leg_raise', name: 'Lying Leg Raises', sets: 3, target: '15-20 reps', type: 'rep-only', note: 'Don’t let feet touch the floor.', muscles: {primary: ['m-abs'], secondary: ['m-quads']}},
+                {id: 'plank', name: 'Plank', sets: 3, target: 'Max', type: 'time', note: 'Total core stability.', muscles: {primary: ['m-abs'], secondary: ['m-obliques','m-lower-back']}}
             ]
         };
+
         const monthNames = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
         
         let todayG = new Date();
@@ -341,6 +339,7 @@
             if (viewMonth < 1) { viewMonth = 12; viewYear--; }
             renderCalendar();
         };
+
         window.selectDate = async (y, m, d) => {
             selectedDateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             document.getElementById('selected-date-title').innerText = `Date: ${y}/${m}/${d}`;
@@ -361,6 +360,25 @@
                 }
             } catch (e) { console.error(e); }
             showLoading(false);
+        };
+
+        window.updateAnatomyMap = (exId) => {
+            document.querySelectorAll('.muscle-path').forEach(m => m.style.fill = 'var(--default-muscle)');
+            document.querySelectorAll('.exercise-card').forEach(c => c.classList.remove('active-ex'));
+
+            if(!exId || !currentRoutine) return;
+
+            const ex = workoutData[currentRoutine].find(e => e.id === exId);
+            if(ex && ex.muscles) {
+                document.getElementById(`card-${exId}`).classList.add('active-ex');
+                
+                ex.muscles.primary.forEach(cls => {
+                    document.querySelectorAll('.' + cls).forEach(el => el.style.fill = 'var(--accent-color)');
+                });
+                ex.muscles.secondary.forEach(cls => {
+                    document.querySelectorAll('.' + cls).forEach(el => el.style.fill = 'var(--secondary-muscle)');
+                });
+            }
         };
 
         window.selectRoutine = (routineType, savedExercises = null) => {
@@ -506,26 +524,6 @@
                 alert('Workout Details & Weight Saved! 💪');
             } catch (e) { alert('Error saving data.'); console.error(e); }
             showLoading(false);
-        };
-
-        window.updateAnatomyMap = (exId) => {
-            document.querySelectorAll('.muscle').forEach(m => m.style.fill = '#3a3a3a');
-            document.querySelectorAll('.exercise-card').forEach(c => c.classList.remove('active-ex'));
-
-            if(!exId || !currentRoutine) return;
-
-            const ex = workoutData[currentRoutine].find(e => e.id === exId);
-            if(ex && ex.muscles) {
-                document.getElementById(`card-${exId}`).classList.add('active-ex');
-                ex.muscles.primary.forEach(mId => {
-                    const el = document.getElementById(mId);
-                    if(el) el.style.fill = 'var(--accent-color)';
-                });
-                ex.muscles.secondary.forEach(mId => {
-                    const el = document.getElementById(mId);
-                    if(el) el.style.fill = 'var(--secondary-muscle-color)';
-                });
-            }
         };
 
         function renderChart() {
