@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sepehr Workout Tracker</title>
+    <title>My Workout Tracker</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏋️</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -190,7 +190,7 @@
             </div>
         </div>
     </div>
-<script type="module">
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -222,8 +222,7 @@
                 {id: 'db_pullover', name: 'Dumbbell Pullover', sets: 3, target: '12 reps', type: 'weight-rep', note: 'Expand the ribcage, slow tempo.', muscles: {primary: ['m-back-lats'], secondary: ['m-front-chest']}},
                 {id: 'ez_curl', name: 'EZ-Bar Bicep Curls', sets: 3, target: '10-12 reps', type: 'weight-rep', note: 'Squeeze biceps hard at top.', muscles: {primary: ['m-front-biceps-l','m-front-biceps-r'], secondary: []}},
                 {id: 'hammer_curl', name: 'Hammer Curls', sets: 3, target: '12 reps', type: 'weight-rep', note: 'Improves grip and arm thickness.', muscles: {primary: ['m-front-biceps-l','m-front-biceps-r'], secondary: []}}
-
-],
+            ],
             legs: [
                 {id: 'bb_squat', name: 'Barbell Back Squat', sets: 4, target: '8-10 reps', type: 'weight-rep', note: 'Deep reps, chest up.', muscles: {primary: ['m-front-quads-l','m-front-quads-r'], secondary: ['m-back-hamstrings-l','m-back-hamstrings-r','m-front-abs']}},
                 {id: 'db_lunges', name: 'Dumbbell Lunges', sets: 3, target: '12/leg reps', type: 'weight-rep', note: 'Boosts balance and endurance.', muscles: {primary: ['m-front-quads-l','m-front-quads-r'], secondary: ['m-back-hamstrings-l','m-back-hamstrings-r']}},
@@ -233,7 +232,6 @@
                 {id: 'plank', name: 'Plank', sets: 3, target: 'Max', type: 'time', note: 'Total core stability.', muscles: {primary: ['m-front-abs'], secondary: ['m-front-quads-l','m-front-quads-r']}}
             ]
         };
-
         const monthNames = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
         
         let todayG = new Date();
@@ -242,7 +240,7 @@
         let viewYear = todayJ.jy;
         let viewMonth = todayJ.jm;
         
-        let selectedDateStr = ${todayJ.jy}-${String(todayJ.jm).padStart(2,'0')}-${String(todayJ.jd).padStart(2,'0')};
+        let selectedDateStr = `${todayJ.jy}-${String(todayJ.jm).padStart(2,'0')}-${String(todayJ.jd).padStart(2,'0')}`;
         let currentRoutine = '';
         let globalPrs = {};
         let savedDatesList = [];
@@ -274,13 +272,14 @@
                             }
                             sets.forEach(set => {
                                 if (exType === 'time') {
-                                    const totalSec = (parseFloat(set.min)  0) * 60 + (parseFloat(set.sec)  0);
+                                    const totalSec = (parseFloat(set.min) || 0) * 60 + (parseFloat(set.sec) || 0);
                                     if (totalSec > (newPrs[exId] || 0)) newPrs[exId] = totalSec;
                                 } else if (exType === 'rep-only') {
                                     const r = parseFloat(set.r) || 0;
                                     if (r > (newPrs[exId] || 0)) newPrs[exId] = r;
                                 } else {
-                                    const w = parseFloat(set.w) || 0;if (w > (newPrs[exId] || 0)) newPrs[exId] = w;
+                                    const w = parseFloat(set.w) || 0;
+                                    if (w > (newPrs[exId] || 0)) newPrs[exId] = w;
                                 }
                             });
                         }
@@ -314,10 +313,10 @@
             const grid = document.getElementById('calendar-grid');
             const title = document.getElementById('calendar-month-year');
             grid.innerHTML = '';
-            title.innerText = ${monthNames[viewMonth - 1]} ${viewYear};
+            title.innerText = `${monthNames[viewMonth - 1]} ${viewYear}`;
 
             const weekdays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
-            weekdays.forEach(w => grid.innerHTML += <div class="weekday">${w}</div>);
+            weekdays.forEach(w => grid.innerHTML += `<div class="weekday">${w}</div>`);
 
             const gFirstDay = jalaali.toGregorian(viewYear, viewMonth, 1);
             const firstDayIndex = (new Date(gFirstDay.gy, gFirstDay.gm - 1, gFirstDay.gd).getDay() + 1) % 7; 
@@ -325,14 +324,14 @@
             let totalDays = viewMonth <= 6 ? 31 : 30;
             if (viewMonth === 12) totalDays = jalaali.isLeapJalaaliYear(viewYear) ? 30 : 29;
 
-            for (let i = 0; i < firstDayIndex; i++) grid.innerHTML += <div></div>;
+            for (let i = 0; i < firstDayIndex; i++) grid.innerHTML += `<div></div>`;
 
             for (let d = 1; d <= totalDays; d++) {
-                const dateStr = ${viewYear}-${String(viewMonth).padStart(2,'0')}-${String(d).padStart(2,'0')};
+                const dateStr = `${viewYear}-${String(viewMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 let classes = 'day';
                 if (savedDatesList.includes(dateStr)) classes += ' has-data';
                 if (dateStr === selectedDateStr) classes += ' selected';
-                grid.innerHTML += <div class="${classes}" onclick="window.selectDate(${viewYear},${viewMonth},${d})">${d}</div>;
+                grid.innerHTML += `<div class="${classes}" onclick="window.selectDate(${viewYear},${viewMonth},${d})">${d}</div>`;
             }
         }
 
@@ -342,10 +341,9 @@
             if (viewMonth < 1) { viewMonth = 12; viewYear--; }
             renderCalendar();
         };
-
         window.selectDate = async (y, m, d) => {
-            selectedDateStr = ${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')};
-            document.getElementById('selected-date-title').innerText = Date: ${y}/${m}/${d};
+            selectedDateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            document.getElementById('selected-date-title').innerText = `Date: ${y}/${m}/${d}`;
             renderCalendar();
             showLoading(true);
             
@@ -365,10 +363,10 @@
             showLoading(false);
         };
 
-window.selectRoutine = (routineType, savedExercises = null) => {
+        window.selectRoutine = (routineType, savedExercises = null) => {
             currentRoutine = routineType;
             document.querySelectorAll('.routine-btn').forEach(b => b.classList.remove('active'));
-            const activeBtn = document.getElementById(btn-${routineType});
+            const activeBtn = document.getElementById(`btn-${routineType}`);
             if (activeBtn) activeBtn.classList.add('active');
 
             const container = document.getElementById('exercises-container');
@@ -390,44 +388,44 @@ window.selectRoutine = (routineType, savedExercises = null) => {
                 const savedSets = savedExercises && savedExercises[ex.id] ? savedExercises[ex.id] : [];
                 const currentPr = globalPrs[ex.id] || 0;
 
-                let prText = 🏆 PR: ${currentPr} kg;
-                if(ex.type === 'rep-only') prText = 🏆 PR: ${currentPr} reps;
+                let prText = `🏆 PR: ${currentPr} kg`;
+                if(ex.type === 'rep-only') prText = `🏆 PR: ${currentPr} reps`;
                 if(ex.type === 'time') {
                     const m = Math.floor(currentPr / 60);
                     const s = currentPr % 60;
-                    prText = 🏆 PR: ${m}m ${s}s;
+                    prText = `🏆 PR: ${m}m ${s}s`;
                 }
 
                 for (let s = 1; s <= ex.sets; s++) {
                     if (ex.type === 'time') {
                         const savedMin = savedSets[s-1]?.min || '';
                         const savedSec = savedSets[s-1]?.sec || '';
-                        setInputsHtml += 
+                        setInputsHtml += `
                             <div class="set-row">
                                 <span>Set ${s}</span>
                                 <input type="number" id="min-${ex.id}-${s}" placeholder="min" value="${savedMin}">
                                 <input type="number" id="sec-${ex.id}-${s}" placeholder="sec" value="${savedSec}">
                             </div>
-                        ;
+                        `;
                     } else if (ex.type === 'rep-only') {
                         const savedR = savedSets[s-1]?.r || '';
-                        setInputsHtml += 
+                        setInputsHtml += `
                             <div class="set-row">
                                 <span>Set ${s}</span>
                                 <div style="text-align:center; color:#666; font-size:12px;">Bodyweight</div>
                                 <input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}">
                             </div>
-                        ;
+                        `;
                     } else {
                         const savedW = savedSets[s-1]?.w || '';
                         const savedR = savedSets[s-1]?.r || '';
-                        setInputsHtml += 
+                        setInputsHtml += `
                             <div class="set-row">
                                 <span>Set ${s}</span>
                                 <input type="number" id="w-${ex.id}-${s}" placeholder="kg" value="${savedW}">
                                 <input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}">
                             </div>
-                        ;
+                        `;
                     }
                 }
 
@@ -435,13 +433,13 @@ window.selectRoutine = (routineType, savedExercises = null) => {
                     <div class="exercise-card" id="card-${ex.id}" onclick="window.updateAnatomyMap('${ex.id}')">
                         <div class="ex-header">
                             <span class="ex-title">${ex.name}</span>
-<span class="ex-target">🎯 Target: ${ex.target}</span>
+                            <span class="ex-target">🎯 Target: ${ex.target}</span>
                             <span class="pr-info">${prText}</span>
                         </div>
                         ${setInputsHtml}
                         <div class="ex-note">💡 Focus: ${ex.note}</div>
                     </div>
-                ;
+                `;
                 
                 if(idx === 0 && !savedExercises) {
                     setTimeout(() => window.updateAnatomyMap(ex.id), 100);
@@ -485,15 +483,15 @@ window.selectRoutine = (routineType, savedExercises = null) => {
                 logData.exercises[ex.id] = [];
                 for (let s = 1; s <= ex.sets; s++) {
                     if (ex.type === 'time') {
-                        const min = document.getElementById(min-${ex.id}-${s}).value;
-                        const sec = document.getElementById(sec-${ex.id}-${s}).value;
+                        const min = document.getElementById(`min-${ex.id}-${s}`).value;
+                        const sec = document.getElementById(`sec-${ex.id}-${s}`).value;
                         if (min || sec) logData.exercises[ex.id].push({ min: min, sec: sec });
                     } else if (ex.type === 'rep-only') {
-                        const r = document.getElementById(r-${ex.id}-${s}).value;
+                        const r = document.getElementById(`r-${ex.id}-${s}`).value;
                         if (r) logData.exercises[ex.id].push({ r: r });
                     } else {
-                        const w = document.getElementById(w-${ex.id}-${s}).value;
-                        const r = document.getElementById(r-${ex.id}-${s}).value;
+                        const w = document.getElementById(`w-${ex.id}-${s}`).value;
+                        const r = document.getElementById(`r-${ex.id}-${s}`).value;
                         if (w || r) logData.exercises[ex.id].push({ w: w, r: r });
                     }
                 }
@@ -518,10 +516,9 @@ window.selectRoutine = (routineType, savedExercises = null) => {
 
             const ex = workoutData[currentRoutine].find(e => e.id === exId);
             if(ex && ex.muscles) {
-                document.getElementById(card-${exId}`).classList.add('active-ex');
+                document.getElementById(`card-${exId}`).classList.add('active-ex');
                 ex.muscles.primary.forEach(mId => {
-
-const el = document.getElementById(mId);
+                    const el = document.getElementById(mId);
                     if(el) el.style.fill = 'var(--accent-color)';
                 });
                 ex.muscles.secondary.forEach(mId => {
@@ -538,9 +535,9 @@ const el = document.getElementById(mId);
 
             for (let m = 4; m <= 6; m++) {
                 for (let d = 1; d <= 31; d++) {
-                    const dateStr = ${targetYear}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')};
-                    if (d === 1  d === 15  d === 31) {
-                        labels.push(${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')});
+                    const dateStr = `${targetYear}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                    if (d === 1 || d === 15 || d === 31) {
+                        labels.push(`${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')}`);
                     } else {
                         labels.push(''); 
                     }
