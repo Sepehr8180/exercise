@@ -181,7 +181,7 @@
         </div>
 
         <div class="card">
-            <h2>📈 Body Weight (Tir - Shahrivar)</h2>
+            <h2>📈 Body Weight</h2>
             <div class="chart-container">
                 <canvas id="weightChart"></canvas>
             </div>
@@ -534,7 +534,7 @@
             for (let m = 4; m <= 6; m++) {
                 for (let d = 1; d <= 31; d++) {
                     const dateStr = `${targetYear}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                    if (d === 1 || d === 15 || d === 31) {
+                    if (d === 1 || d === 15 || (d === 31 && m === 6)) {
                         labels.push(`${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')}`);
                     } else {
                         labels.push(''); 
