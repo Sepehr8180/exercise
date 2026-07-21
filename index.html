@@ -575,6 +575,71 @@
         </button>
       </div>
     </div>
+    <!-- پنجره تمام صفحه برای پیام‌های جمنای -->
+    <div
+      id="fullscreen-modal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 10000;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        box-sizing: border-box;
+        overflow-y: auto;
+        direction: rtl;
+        text-align: right;
+      "
+    >
+      <div
+        style="
+          width: 100%;
+          max-width: 600px;
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 15px;
+        "
+      >
+        <button
+          onclick="window.closeFullScreen()"
+          style="
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+          "
+        >
+          ❌ بستن
+        </button>
+      </div>
+      <div
+        id="fullscreen-content"
+        style="
+          background: #222;
+          color: #e0e0e0;
+          padding: 20px;
+          border-radius: 12px;
+          width: 100%;
+          max-width: 600px;
+          line-height: 1.8;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+          font-size: 16px;
+          overflow-x: auto;
+        "
+      >
+        <!-- متن پیام اینجا قرار می‌گیرد -->
+      </div>
+    </div>
+
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
       import {
@@ -1398,6 +1463,18 @@
         showLoading(false);
       };
 
+      // توابع مربوط به نمایش تمام صفحه پیام‌ها
+      window.openFullScreen = (msgId) => {
+        const contentHtml = document.getElementById(msgId).innerHTML;
+        document.getElementById("fullscreen-content").innerHTML = contentHtml;
+        document.getElementById("fullscreen-modal").style.display = "flex";
+      };
+
+      window.closeFullScreen = () => {
+        document.getElementById("fullscreen-modal").style.display = "none";
+        document.getElementById("fullscreen-content").innerHTML = "";
+      };
+
       // تابع جدید: خواندن وضعیت زنده تمرین از روی صفحه
       window.getCurrentWorkoutContext = () => {
         if (!currentRoutine || currentRoutine === "rest") {
@@ -1448,17 +1525,17 @@
       };
 
       // توابع مربوط به چت جمنای
-  // دریافت کلید امن از حافظه مرورگر
-let GEMINI_API_KEY = localStorage.getItem("MY_GEMINI_KEY");
+      // دریافت کلید امن از حافظه مرورگر
+      let GEMINI_API_KEY = localStorage.getItem("MY_GEMINI_KEY");
 
-if (!GEMINI_API_KEY) {
-  GEMINI_API_KEY = prompt("لطفاً کلید Gemini API خود را وارد کنید:");
-  if (GEMINI_API_KEY) {
-    localStorage.setItem("MY_GEMINI_KEY", GEMINI_API_KEY.trim());
-  }
-}
+      if (!GEMINI_API_KEY) {
+        GEMINI_API_KEY = prompt("لطفاً کلید Gemini API خود را وارد کنید:");
+        if (GEMINI_API_KEY) {
+          localStorage.setItem("MY_GEMINI_KEY", GEMINI_API_KEY.trim());
+        }
+      }
 
-let conversationHistory = [];
+      let conversationHistory = [];
 
       window.sendChatMessage = async () => {
         const inputEl = document.getElementById("chat-input");
@@ -1530,9 +1607,14 @@ let conversationHistory = [];
             const htmlText = marked.parse(aiText);
 
             // ۲. نمایش پیام هوش مصنوعی (با استایل راست‌چین و بدون مشکل ستاره‌ها)
+            // ۲. نمایش پیام هوش مصنوعی (با استایل راست‌چین و دکمه تمام صفحه)
+            const msgId = "ai-msg-" + Date.now();
             historyEl.innerHTML += `
-                    <div style="align-self: flex-start; background: #333; padding: 8px 12px; border-radius: 8px; border-top-left-radius: 0; color: #e0e0e0; max-width: 85%; line-height: 1.6; direction: rtl; text-align: right; overflow-x: auto;">
-                      ${htmlText}
+                    <div style="align-self: flex-start; background: #333; padding: 12px; border-radius: 8px; border-top-left-radius: 0; color: #e0e0e0; max-width: 85%; line-height: 1.6; direction: rtl; text-align: right; position: relative;">
+                      <button onclick="window.openFullScreen('${msgId}')" style="position: absolute; top: 5px; left: 5px; background: transparent; border: none; color: #ff9800; font-size: 18px; cursor: pointer;" title="تمام صفحه">⛶</button>
+                      <div id="${msgId}" style="margin-top: 15px; overflow-x: auto;">
+                        ${htmlText}
+                      </div>
                     </div>`;
           } else {
             console.error("Gemini API Error Detail:", data);
