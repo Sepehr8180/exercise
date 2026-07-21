@@ -1448,8 +1448,17 @@
       };
 
       // توابع مربوط به چت جمنای
-      const GEMINI_API_KEY = "YOUR_CLOUDFLARE_STORED_KEY";
-      let conversationHistory = [];
+  // دریافت کلید امن از حافظه مرورگر
+let GEMINI_API_KEY = localStorage.getItem("MY_GEMINI_KEY");
+
+if (!GEMINI_API_KEY) {
+  GEMINI_API_KEY = prompt("لطفاً کلید Gemini API خود را وارد کنید:");
+  if (GEMINI_API_KEY) {
+    localStorage.setItem("MY_GEMINI_KEY", GEMINI_API_KEY.trim());
+  }
+}
+
+let conversationHistory = [];
 
       window.sendChatMessage = async () => {
         const inputEl = document.getElementById("chat-input");
