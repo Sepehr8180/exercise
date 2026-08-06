@@ -4,25 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Workout Tracker</title>
-    <!-- Favicon Shortcut -->
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏋️</text></svg>"
     />
-    <!-- Jalaali Date Library -->
     <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.js"></script>
-    <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Markdown Parser Library -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
       :root {
         --bg-color: #121212;
         --card-bg: #1e1e1e;
         --text-color: #e0e0e0;
-        --accent-color: #ff0000; /* قرمز برای عضله اصلی مثل ماسل ویکی */
-        --secondary-muscle: #ffb300; /* نارنجی/زرد برای عضله کمکی */
-        --default-muscle: #e2e8f0; /* خاکستری روشن برای عضلات درگیر نشده */
+        --accent-color: #ff0000;
+        --secondary-muscle: #ffb300;
+        --default-muscle: #e2e8f0;
         --muscle-stroke: #94a3b8;
         --border-radius: 12px;
         --worked-out-bg: #2e7d32;
@@ -151,6 +147,7 @@
         padding: 15px 5px;
         border-radius: 8px;
         margin-bottom: 15px;
+        transition: all 0.3s ease;
       }
       .anatomy-box {
         display: flex;
@@ -209,6 +206,28 @@
         flex-direction: column;
         margin-bottom: 10px;
       }
+      .ex-header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .info-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background-color: #444;
+        color: #ff9800;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .info-icon:hover {
+        background-color: #666;
+      }
       .ex-title {
         font-weight: bold;
         font-size: 15px;
@@ -253,6 +272,7 @@
         color: #999;
         text-align: left;
         margin-top: 10px;
+        margin-bottom: 10px;
         font-style: italic;
         background: rgba(0, 0, 0, 0.2);
         padding: 8px;
@@ -290,6 +310,51 @@
         width: 100%;
         margin-top: 20px;
       }
+
+      /* Floating Action Button (FAB) */
+      .fab-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
+      }
+      .fab-menu {
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .fab-btn {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background-color: #ff9800;
+        color: black;
+        font-size: 24px;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s;
+      }
+      .fab-btn:active {
+        transform: scale(0.95);
+      }
+      .fab-item {
+        background-color: #333;
+        color: white;
+        border: 1px solid #555;
+        padding: 10px 15px;
+        border-radius: 20px;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        font-weight: bold;
+      }
     </style>
   </head>
   <body>
@@ -326,10 +391,11 @@
       </div>
 
       <div id="workout-section" style="display: none">
-        <div class="card anatomy-container">
-          <h2 style="color: #333; margin-top: 0">Target Muscles</h2>
+        <div class="card anatomy-container" id="main-anatomy-container">
+          <h2 style="color: #333; margin-top: 0; text-align: center">
+            Target Muscles
+          </h2>
           <div class="anatomy-box">
-            <!-- High-Quality Front Anatomy -->
             <svg viewBox="0 0 100 180">
               <text
                 x="50"
@@ -392,7 +458,6 @@
               />
             </svg>
 
-            <!-- High-Quality Back Anatomy -->
             <svg viewBox="0 0 100 180">
               <text
                 x="50"
@@ -489,7 +554,7 @@
           <canvas id="weightChart"></canvas>
         </div>
       </div>
-      <!-- بخش چت با جمنای -->
+
       <div class="card">
         <h2>AI Coach (Gemini) 💬</h2>
         <div
@@ -518,13 +583,14 @@
               max-width: 85%;
             "
           >
-            Hi! Any questions about today's workout
+            Hi! Any questions about today's workout?
           </div>
         </div>
         <div style="display: flex; gap: 8px">
-          <input
-            type="text"
+          <!-- تبدیل input به textarea برای رفع مشکل خطوط طولانی و تنظیم dir="auto" برای حل بهم ریختگی دو زبانه -->
+          <textarea
             id="chat-input"
+            dir="auto"
             placeholder="Type your question here..."
             style="
               flex: 1;
@@ -534,9 +600,21 @@
               background: #333;
               color: white;
               outline: none;
+              font-family: inherit;
+              resize: vertical;
+              min-height: 42px;
+              max-height: 120px;
+              line-height: 1.5;
+              unicode-bidi: plaintext;
+              text-align: start;
             "
-            onkeypress="if (event.key === 'Enter') sendChatMessage();"
-          />
+            onkeydown="
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendChatMessage();
+              }
+            "
+          ></textarea>
           <button
             onclick="sendChatMessage()"
             style="
@@ -547,12 +625,14 @@
               border-radius: 8px;
               font-weight: bold;
               cursor: pointer;
+              height: 42px; /* هم‌تراز با باکس چت */
             "
           >
             Send
           </button>
         </div>
       </div>
+
       <div class="card">
         <h2>🤖 AI Assistant</h2>
         <p
@@ -575,7 +655,165 @@
         </button>
       </div>
     </div>
-    <!-- پنجره تمام صفحه برای پیام‌های جمنای -->
+
+    <!-- Modal اطلاعات حرکت -->
+    <div
+      id="exercise-info-modal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+        direction: rtl;
+      "
+    >
+      <div
+        style="
+          background: #222;
+          padding: 20px;
+          border-radius: 12px;
+          width: 90%;
+          max-width: 450px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+          border: 1px solid #444;
+        "
+      >
+        <h3
+          id="info-modal-title"
+          style="margin-top: 0; color: #ff9800; text-align: right"
+        ></h3>
+        <!-- بعدا می‌توانید آدرس منبع را در تگ زیر قرار دهید -->
+        <img
+          id="info-modal-img"
+          src=""
+          style="
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: #333;
+          "
+          alt="تصویر حرکت (بعدا اضافه کنید)"
+        />
+        <p
+          id="info-modal-desc"
+          style="
+            font-size: 14px;
+            color: #e0e0e0;
+            text-align: right;
+            line-height: 1.6;
+          "
+        ></p>
+        <button
+          onclick="
+            document.getElementById('exercise-info-modal').style.display =
+              'none'
+          "
+          style="
+            background: #555;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+          "
+        >
+          بستن صفحه
+        </button>
+      </div>
+    </div>
+
+    <!-- دکمه شناور و مودال تایمر -->
+    <div class="fab-container">
+      <div class="fab-menu" id="fab-menu">
+        <button class="fab-item" onclick="window.openTimer()">⏱️ Timer</button>
+      </div>
+      <button class="fab-btn" onclick="window.toggleFabMenu()">+</button>
+    </div>
+
+    <div
+      id="timer-modal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+      "
+    >
+      <div
+        style="
+          background: #222;
+          padding: 25px;
+          border-radius: 12px;
+          text-align: center;
+          min-width: 260px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        "
+      >
+        <h3 style="margin-top: 0; color: #ff9800">⏱️ Rest Timer</h3>
+        <div
+          id="timer-display"
+          style="
+            font-size: 55px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: white;
+          "
+        >
+          01:30
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center">
+          <button
+            onclick="window.startTimer()"
+            style="
+              background: #2e7d32;
+              color: white;
+              border: none;
+              padding: 12px 25px;
+              border-radius: 8px;
+              font-weight: bold;
+              cursor: pointer;
+              font-size: 16px;
+            "
+          >
+            Start
+          </button>
+          <button
+            onclick="window.closeTimer()"
+            style="
+              background: #d32f2f;
+              color: white;
+              border: none;
+              padding: 12px 25px;
+              border-radius: 8px;
+              font-weight: bold;
+              cursor: pointer;
+              font-size: 16px;
+            "
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- فول اسکرین برای چت ها -->
     <div
       id="fullscreen-modal"
       style="
@@ -635,9 +873,7 @@
           font-size: 16px;
           overflow-x: auto;
         "
-      >
-        <!-- متن پیام اینجا قرار می‌گیرد -->
-      </div>
+      ></div>
     </div>
 
     <script type="module">
@@ -667,7 +903,6 @@
       // ۱. مخزن تمام برنامه‌های ورزشی شما
       const workoutPrograms = {
         program_1: {
-          // برنامه اولیه شما
           push: [
             {
               id: "bb_bench",
@@ -859,62 +1094,262 @@
           ],
         },
         program_2: {
-          // برنامه جدید شما (فعلا خالی)
-          day1: [
-            // ساختار تمرینات جدید را بعدا اینجا اضافه کنید
+          push: [
+            {
+              id: "bb_bench",
+              name: "Barbell Bench Press",
+              sets: 4,
+              target: "8, 8, 6-8, 6-8",
+              type: "weight-rep",
+              note: "Slow eccentric, pause on chest (RIR 1-2).",
+              muscles: {
+                primary: ["m-chest"],
+                secondary: ["m-delts-front", "m-triceps"],
+              },
+            },
+            {
+              id: "inc_db_press",
+              name: "Incline Dumbbell Press",
+              sets: 3,
+              target: "10-12 reps",
+              type: "weight-rep",
+              note: "Focus on upper chest volume. 90s rest.",
+              muscles: { primary: ["m-chest"], secondary: ["m-delts-front"] },
+            },
+            {
+              id: "cable_fly",
+              name: "Cable Fly (Low to High)",
+              sets: 3,
+              target: "12-15 reps",
+              type: "weight-rep",
+              note: "Low to high. Deep stretch for the chest.",
+              muscles: { primary: ["m-chest"], secondary: ["m-delts-front"] },
+            },
+            {
+              id: "db_shoulder_press",
+              name: "Seated DB Shoulder Press",
+              sets: 3,
+              target: "8-10 reps",
+              type: "weight-rep",
+              note: "Seated DB press for raw shoulder mass.",
+              muscles: { primary: ["m-delts-front"], secondary: ["m-triceps"] },
+            },
+            {
+              id: "cable_lat_raise",
+              name: "Cable Lateral Raise",
+              sets: 3,
+              target: "15-20 reps",
+              type: "weight-rep",
+              note: "Unilateral. Full control on the eccentric phase.",
+              muscles: {
+                primary: ["m-delts-front", "m-delts-rear"],
+                secondary: [],
+              },
+            },
+            {
+              id: "overhead_tricep",
+              name: "Overhead Cable Extension",
+              sets: 3,
+              target: "10-12 reps",
+              type: "weight-rep",
+              note: "Focus on the long head of the triceps.",
+              muscles: { primary: ["m-triceps"], secondary: [] },
+            },
+            {
+              id: "tricep_push",
+              name: "Rope Pushdown",
+              sets: 3,
+              target: "12-15 reps",
+              type: "weight-rep",
+              note: "Rope pushdown for combined triceps growth.",
+              muscles: { primary: ["m-triceps"], secondary: [] },
+            },
+            {
+              id: "bench_dips",
+              name: "Bench Dips",
+              sets: 2,
+              target: "Near Failure",
+              type: "rep-only",
+              note: "Take it near failure, but not absolute.",
+              muscles: { primary: ["m-triceps"], secondary: ["m-chest"] },
+            },
           ],
-          day2: [
-            /* ... */
+          pull: [
+            {
+              id: "lat_pull",
+              name: "Lat Pulldown",
+              sets: 4,
+              target: "10, 10, 8, 8",
+              type: "weight-rep",
+              note: "Drive elbows down into your pockets.",
+              muscles: { primary: ["m-lats"], secondary: ["m-biceps"] },
+            },
+            {
+              id: "chest_supp_row",
+              name: "Chest Supported Row",
+              sets: 3,
+              target: "8-10 reps",
+              type: "weight-rep",
+              note: "Chest supported. Zero strain on the lower back.",
+              muscles: {
+                primary: ["m-lats", "m-traps"],
+                secondary: ["m-biceps", "m-lower-back"],
+              },
+            },
+            {
+              id: "straight_arm_pull",
+              name: "Straight Arm Pulldown",
+              sets: 3,
+              target: "12-15 reps",
+              type: "weight-rep",
+              note: "Excellent for building a wider back (V-Taper).",
+              muscles: { primary: ["m-lats"], secondary: ["m-triceps"] },
+            },
+            {
+              id: "facepull",
+              name: "Face Pulls (Cable)",
+              sets: 3,
+              target: "15-20 reps",
+              type: "weight-rep",
+              note: "Crucial for shoulder health and posture.",
+              muscles: {
+                primary: ["m-delts-rear", "m-traps"],
+                secondary: ["m-lats"],
+              },
+            },
+            {
+              id: "rear_delt_fly",
+              name: "Rear Delt Fly",
+              sets: 3,
+              target: "15-20 reps",
+              type: "weight-rep",
+              note: "Machine or cable fly for posture correction.",
+              muscles: { primary: ["m-delts-rear"], secondary: ["m-traps"] },
+            },
+            {
+              id: "ez_curl",
+              name: "EZ-Bar Bicep Curls",
+              sets: 3,
+              target: "8-10 reps",
+              type: "weight-rep",
+              note: "Strict form. Take the last set to failure.",
+              muscles: { primary: ["m-biceps"], secondary: ["m-forearms"] },
+            },
+            {
+              id: "inc_db_curl",
+              name: "Incline Dumbbell Curl",
+              sets: 3,
+              target: "10-12 reps",
+              type: "weight-rep",
+              note: "Deep stretch on the incline for bicep growth.",
+              muscles: { primary: ["m-biceps"], secondary: [] },
+            },
+            {
+              id: "hammer_curl",
+              name: "Hammer Curls",
+              sets: 2,
+              target: "12-15 reps",
+              type: "weight-rep",
+              note: "Targets the brachialis. Last set to failure.",
+              muscles: { primary: ["m-biceps", "m-forearms"], secondary: [] },
+            },
+          ],
+          legs: [
+            {
+              id: "bb_squat",
+              name: "Barbell Back Squat",
+              sets: 4,
+              target: "8, 8, 6, 6",
+              type: "weight-rep",
+              note: "The core leg movement. Keep form tight on heavy weight.",
+              muscles: {
+                primary: ["m-quads", "m-glutes"],
+                secondary: ["m-hamstrings", "m-lower-back"],
+              },
+            },
+            {
+              id: "rdl",
+              name: "Romanian Deadlift (RDL)",
+              sets: 3,
+              target: "8-10 reps",
+              type: "weight-rep",
+              note: "Focus on hip hinge and extension.",
+              muscles: {
+                primary: ["m-hamstrings", "m-glutes"],
+                secondary: ["m-lower-back"],
+              },
+            },
+            {
+              id: "bulgarian_split",
+              name: "Bulgarian Split Squat",
+              sets: 3,
+              target: "10/leg reps",
+              type: "weight-rep",
+              note: "Great unilateral work for quads and glutes.",
+              muscles: {
+                primary: ["m-quads", "m-glutes"],
+                secondary: ["m-hamstrings"],
+              },
+            },
+            {
+              id: "machine_leg_curl",
+              name: "Machine Leg Curl",
+              sets: 3,
+              target: "10-12 reps",
+              type: "weight-rep",
+              note: "Take the last set close to failure.",
+              muscles: { primary: ["m-hamstrings"], secondary: ["m-calves"] },
+            },
+            {
+              id: "calf_raise",
+              name: "Standing Calf Raises",
+              sets: 4,
+              target: "12-15 reps",
+              type: "weight-rep",
+              note: "Go heavy. Pause at top, full stretch at bottom.",
+              muscles: { primary: ["m-calves"], secondary: [] },
+            },
+            {
+              id: "hanging_leg_raise",
+              name: "Hanging Leg Raise",
+              sets: 3,
+              target: "12-15 reps",
+              type: "rep-only",
+              note: "Swap to lying leg raises if this is too hard.",
+              muscles: { primary: ["m-abs"], secondary: ["m-quads"] },
+            },
+            {
+              id: "plank",
+              name: "Plank",
+              sets: 3,
+              target: "60-90 sec",
+              type: "time",
+              note: "Add weight once you can easily hold for 90 seconds.",
+              muscles: {
+                primary: ["m-abs"],
+                secondary: ["m-obliques", "m-lower-back"],
+              },
+            },
           ],
         },
-        // هر زمان برنامه سومی داشتید، کافیست "program_3" را اینجا اضافه کنید
       };
-      /* //برای زمانی است که فقط یک برنامه داشتم
-              const workoutData = {
-                  push: [
-                      {id: 'bb_bench', name: 'Barbell Bench Press', sets: 4, target: '6-10 reps', type: 'weight-rep', note: 'Heavy load, touch chest lightly.', muscles: {primary: ['m-chest'], secondary: ['m-delts-front','m-triceps']}},
-                      {id: 'inc_db_press', name: 'Incline Dumbbell Press', sets: 3, target: '10-12 reps', type: 'weight-rep', note: 'Focus on upper chest volume.', muscles: {primary: ['m-chest'], secondary: ['m-delts-front']}},
-                      {id: 'arnold_press', name: 'Dumbbell Arnold Press', sets: 3, target: '10 reps', type: 'weight-rep', note: 'Full rotation for shoulder width.', muscles: {primary: ['m-delts-front'], secondary: ['m-triceps']}},
-                      {id: 'lat_raise', name: 'Lateral Raises (Dumbbell)', sets: 4, target: '15 reps', type: 'weight-rep', note: 'Strict form, no swinging.', muscles: {primary: ['m-delts-front', 'm-delts-rear'], secondary: []}},
-                      {id: 'tricep_push', name: 'Cable Tricep Pushdowns', sets: 3, target: '12-15 reps', type: 'weight-rep', note: 'Squeeze at the bottom.', muscles: {primary: ['m-triceps'], secondary: []}},
-                      {id: 'bench_dips', name: 'Bench Dips', sets: 3, target: 'Failure', type: 'rep-only', note: 'Great for tricep endurance.', muscles: {primary: ['m-triceps'], secondary: ['m-chest']}}
-                  ],
-                  pull: [
-                      {id: 'lat_pull', name: 'Lat Pulldown', sets: 4, target: '10 reps', type: 'weight-rep', note: 'Pull with elbows, not hands.', muscles: {primary: ['m-lats'], secondary: ['m-biceps']}},
-                      {id: 'db_row', name: 'One-Arm Dumbbell Row', sets: 3, target: '10 reps', type: 'weight-rep', note: 'Stretch the lat at the bottom.', muscles: {primary: ['m-lats'], secondary: ['m-biceps','m-traps','m-lower-back']}},
-                      {id: 'facepull', name: 'Face Pulls (Cable)', sets: 3, target: '15 reps', type: 'weight-rep', note: 'Pull to face, hold for 1 sec.', muscles: {primary: ['m-delts-rear','m-traps'], secondary: ['m-lats']}},
-                      {id: 'db_pullover', name: 'Dumbbell Pullover', sets: 3, target: '12 reps', type: 'weight-rep', note: 'Expand the ribcage, slow tempo.', muscles: {primary: ['m-lats'], secondary: ['m-chest']}},
-                      {id: 'ez_curl', name: 'EZ-Bar Bicep Curls', sets: 3, target: '10-12 reps', type: 'weight-rep', note: 'Squeeze biceps hard at top.', muscles: {primary: ['m-biceps'], secondary: ['m-forearms']}},
-                      {id: 'hammer_curl', name: 'Hammer Curls', sets: 3, target: '12 reps', type: 'weight-rep', note: 'Improves grip and arm thickness.', muscles: {primary: ['m-biceps','m-forearms'], secondary: []}}
-                  ],
-                  legs: [
-                      {id: 'bb_squat', name: 'Barbell Back Squat', sets: 4, target: '8-10 reps', type: 'weight-rep', note: 'Deep reps, chest up.', muscles: {primary: ['m-quads','m-glutes'], secondary: ['m-hamstrings','m-lower-back']}},
-                      {id: 'db_lunges', name: 'Dumbbell Lunges', sets: 3, target: '12/leg reps', type: 'weight-rep', note: 'Boosts balance and endurance.', muscles: {primary: ['m-quads','m-glutes'], secondary: ['m-hamstrings']}},
-                      {id: 'db_leg_curl', name: 'Dumbbell Leg Curls', sets: 3, target: '12-15 reps', type: 'weight-rep', note: 'Control weight on the way down.', muscles: {primary: ['m-hamstrings'], secondary: ['m-calves']}},
-                      {id: 'calf_raise', name: 'Standing Calf Raises', sets: 4, target: '20 reps', type: 'weight-rep', note: 'Full stretch at the bottom.', muscles: {primary: ['m-calves'], secondary: []}},
-                      {id: 'lying_leg_raise', name: 'Lying Leg Raises', sets: 3, target: '15-20 reps', type: 'rep-only', note: 'Don’t let feet touch the floor.', muscles: {primary: ['m-abs'], secondary: ['m-quads']}},
-                      {id: 'plank', name: 'Plank', sets: 3, target: 'Max', type: 'time', note: 'Total core stability.', muscles: {primary: ['m-abs'], secondary: ['m-obliques','m-lower-back']}}
-                  ]
-              };
-      */
+
       // ۲. آرایه زمان‌بندی برنامه‌ها
-      // **نکته مهم:** تاریخ‌ها باید به ترتیب از قدیمی به جدید نوشته شوند.
       const programTimeline = [
-        { startDate: "1405-04-01", programId: "program_1" }, // تاریخ پیش‌فرض برای برنامه اول
-        { startDate: "1405-06-01", programId: "program_2" }, // تاریخی که برنامه دوم شروع می‌شود
-        // برای برنامه‌های بعدی در آینده، کافیست یک سطر جدید اینجا اضافه کنید
+        { startDate: "1405-04-01", programId: "program_1" },
+        { startDate: "1405-05-17", programId: "program_2" },
       ];
-      // ۳. تابع هوشمند برای تشخیص برنامه فعال در یک تاریخ مشخص
+
+      // ۳. تابع هوشمند برای تشخیص برنامه فعال
       function getActiveWorkoutData(dateStr) {
-        // از آخر (جدیدترین تاریخ) به اول چک می‌کنیم
         for (let i = programTimeline.length - 1; i >= 0; i--) {
           if (dateStr >= programTimeline[i].startDate) {
             return workoutPrograms[programTimeline[i].programId];
           }
         }
-        // در صورتی که تاریخی قبل از اولین رکورد انتخاب شد، همان برنامه اول برگردانده می‌شود
         return workoutPrograms[programTimeline[0].programId];
       }
+
       const monthNames = [
         "فروردین",
         "اردیبهشت",
@@ -940,14 +1375,12 @@
       let viewYear = todayJ.jy;
       let viewMonth = todayJ.jm;
 
-      let selectedDateStr = `${todayJ.jy}-${String(todayJ.jm).padStart(
-        2,
-        "0",
-      )}-${String(todayJ.jd).padStart(2, "0")}`;
+      let selectedDateStr = `${todayJ.jy}-${String(todayJ.jm).padStart(2, "0")}-${String(todayJ.jd).padStart(2, "0")}`;
       let currentRoutine = "";
       let globalPrs = {};
       let savedDatesList = [];
       let weightChartInstance = null;
+      window.currentActiveExId = null; // برای ردیابی حرکت فعال جهت تایمر
 
       window.onload = async () => {
         showLoading(true);
@@ -1055,10 +1488,7 @@
         for (let i = 0; i < firstDayIndex; i++) grid.innerHTML += `<div></div>`;
 
         for (let d = 1; d <= totalDays; d++) {
-          const dateStr = `${viewYear}-${String(viewMonth).padStart(
-            2,
-            "0",
-          )}-${String(d).padStart(2, "0")}`;
+          const dateStr = `${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
           let classes = "day";
           if (savedDatesList.includes(dateStr)) classes += " has-data";
           if (dateStr === selectedDateStr) classes += " selected";
@@ -1080,14 +1510,11 @@
       };
 
       window.selectDate = async (y, m, d) => {
-        selectedDateStr = `${y}-${String(m).padStart(2, "0")}-${String(
-          d,
-        ).padStart(2, "0")}`;
+        selectedDateStr = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         document.getElementById("selected-date-title").innerText =
           `Date: ${y}/${m}/${d}`;
         renderCalendar();
 
-        // ساخت دکمه‌های داینامیک با ارجاع مستقیم به window
         const activeData = getActiveWorkoutData(selectedDateStr);
         const selectorContainer = document.getElementById(
           "dynamic-routine-selector",
@@ -1126,6 +1553,7 @@
       };
 
       window.updateAnatomyMap = (exId) => {
+        window.currentActiveExId = exId; // ذخیره آیدی حرکت برای تایمر هوشمند
         document
           .querySelectorAll(".muscle-path")
           .forEach((m) => (m.style.fill = "var(--default-muscle)"));
@@ -1133,14 +1561,33 @@
           .querySelectorAll(".exercise-card")
           .forEach((c) => c.classList.remove("active-ex"));
 
-        if (!exId || !currentRoutine) return;
+        const anatomyContainer = document.getElementById(
+          "main-anatomy-container",
+        );
+        const workoutSection = document.getElementById("workout-section");
 
-        // تغییر اصلی در این بخش برای خواندن برنامه درست بر اساس تاریخ
+        if (!exId || !currentRoutine) {
+          // اگر حرکتی انتخاب نشده بود، پنل آناتومی برگرده سر جاش
+          if (anatomyContainer && workoutSection) {
+            workoutSection.insertBefore(
+              anatomyContainer,
+              workoutSection.firstChild,
+            );
+          }
+          return;
+        }
+
         const activeData = getActiveWorkoutData(selectedDateStr);
         const ex = activeData[currentRoutine].find((e) => e.id === exId);
 
         if (ex && ex.muscles) {
-          document.getElementById(`card-${exId}`).classList.add("active-ex");
+          const activeCard = document.getElementById(`card-${exId}`);
+          activeCard.classList.add("active-ex");
+
+          // انتقال پنل عضلات درگیر به زیر حرکت انتخاب شده
+          if (activeCard && anatomyContainer) {
+            activeCard.appendChild(anatomyContainer);
+          }
 
           ex.muscles.primary.forEach((cls) => {
             document
@@ -1233,7 +1680,10 @@
           container.innerHTML += `
                           <div class="exercise-card" id="card-${ex.id}" onclick="window.updateAnatomyMap('${ex.id}')">
                               <div class="ex-header">
-                                  <span class="ex-title">${ex.name}</span>
+                                  <div class="ex-header-top">
+                                    <span class="ex-title">${ex.name}</span>
+                                    <span class="info-icon" onclick="event.stopPropagation(); window.openExerciseInfo('${ex.id}')">❕</span>
+                                  </div>
                                   <span class="ex-target">🎯 Target: ${ex.target}</span>
                                   <span class="pr-info">${prText}</span>
                               </div>
@@ -1251,6 +1701,22 @@
           const firstKey = Object.keys(savedExercises)[0];
           if (firstKey)
             setTimeout(() => window.updateAnatomyMap(firstKey), 100);
+        }
+      };
+
+      // تابع نمایش اطلاعات هر حرکت در مودال
+      window.openExerciseInfo = (exId) => {
+        const activeData = getActiveWorkoutData(selectedDateStr);
+        const ex = activeData[currentRoutine].find((e) => e.id === exId);
+        if (ex) {
+          document.getElementById("info-modal-title").innerText = ex.name;
+          document.getElementById("info-modal-desc").innerText =
+            ex.note || "نکته‌ای برای این حرکت ثبت نشده است.";
+          // می‌توانید بعداً لینک عکس اصلی را اینجا جایگذاری کنید
+          document.getElementById("info-modal-img").src =
+            "https://via.placeholder.com/450x200.png?text=" +
+            encodeURIComponent(ex.name);
+          document.getElementById("exercise-info-modal").style.display = "flex";
         }
       };
 
@@ -1327,10 +1793,7 @@
 
         for (let m = 4; m <= 6; m++) {
           for (let d = 1; d <= 31; d++) {
-            const dateStr = `${targetYear}-${String(m).padStart(
-              2,
-              "0",
-            )}-${String(d).padStart(2, "0")}`;
+            const dateStr = `${targetYear}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
             if (d === 1 || d === 15 || (d === 31 && m === 6)) {
               labels.push(
                 `${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`,
@@ -1387,6 +1850,7 @@
           },
         });
       }
+
       window.exportDataForAI = async () => {
         showLoading(true);
         try {
@@ -1394,12 +1858,10 @@
           let exportText = "گزارش تمرینات ورزشی من تا این لحظه:\n\n";
           let logs = [];
 
-          // جمع‌آوری اطلاعات
           logsSnapshot.forEach((doc) => {
             logs.push({ date: doc.id, data: doc.data() });
           });
 
-          // مرتب‌سازی بر اساس تاریخ (از قدیمی به جدید)
           logs.sort((a, b) => a.date.localeCompare(b.date));
 
           logs.forEach((log) => {
@@ -1408,27 +1870,20 @@
               exportText += `⚖️ وزن بدن: ${log.data.bodyWeight} kg\n`;
             exportText += `💪 روتین تمرینی: ${log.data.routine}\n`;
 
-            // دریافت دیتای برنامه‌ی فعال در این تاریخ برای پیدا کردن نام و ترتیب حرکات
             const activeData = getActiveWorkoutData(log.date);
             const exercisesForRoutine = activeData[log.data.routine] || [];
 
             if (log.data.exercises) {
-              // استخراج شناسه‌های حرکات ذخیره شده در این روز
               let loggedExIds = Object.keys(log.data.exercises);
 
-              // مرتب‌سازی شناسه‌ها دقیقاً بر اساس ترتیبی که در آرایه برنامه تعریف شده‌اند
               loggedExIds.sort((a, b) => {
                 let indexA = exercisesForRoutine.findIndex((e) => e.id === a);
                 let indexB = exercisesForRoutine.findIndex((e) => e.id === b);
-
-                // اگر حرکتی در برنامه پیدا نشد (مثلاً قبلاً بوده و پاک شده)، به انتهای لیست برود
                 if (indexA === -1) indexA = 999;
                 if (indexB === -1) indexB = 999;
-
                 return indexA - indexB;
               });
 
-              // حالا حلقه را روی لیست مرتب‌شده اجرا می‌کنیم
               for (const exId of loggedExIds) {
                 const sets = log.data.exercises[exId];
                 const exerciseObj = exercisesForRoutine.find(
@@ -1451,7 +1906,6 @@
             exportText += `-----------------------\n`;
           });
 
-          // کپی کردن در کلیپ‌بورد
           await navigator.clipboard.writeText(exportText);
           alert(
             "✅ اطلاعات ورزش شما با موفقیت کپی شد! حالا می‌توانید آن را برای هوش مصنوعی Paste کنید.",
@@ -1463,7 +1917,6 @@
         showLoading(false);
       };
 
-      // توابع مربوط به نمایش تمام صفحه پیام‌ها
       window.openFullScreen = (msgId) => {
         const contentHtml = document.getElementById(msgId).innerHTML;
         document.getElementById("fullscreen-content").innerHTML = contentHtml;
@@ -1475,7 +1928,73 @@
         document.getElementById("fullscreen-content").innerHTML = "";
       };
 
-      // تابع جدید: خواندن وضعیت زنده تمرین از روی صفحه
+      // === منطق تایمر و دکمه شناور ===
+      let timerInterval;
+      let remainingSeconds = 0;
+
+      window.toggleFabMenu = () => {
+        const menu = document.getElementById("fab-menu");
+        menu.style.display = menu.style.display === "flex" ? "none" : "flex";
+      };
+
+      window.openTimer = () => {
+        document.getElementById("fab-menu").style.display = "none";
+        document.getElementById("timer-modal").style.display = "flex";
+        clearInterval(timerInterval);
+
+        // ست کردن زمان بر اساس حرکت به صورت هوشمند
+        remainingSeconds = 60; // زمان پیش‌فرض برای حرکات کوچک (دست، شکم، ساق)
+        if (window.currentActiveExId) {
+          const activeData = getActiveWorkoutData(selectedDateStr);
+          const ex = activeData[currentRoutine]?.find(
+            (e) => e.id === window.currentActiveExId,
+          );
+          if (ex) {
+            // اگر عضلات بزرگ مثل سینه، پا یا زیربغل درگیر باشن زمان رو ۹۰ ثانیه می‌کنیم
+            const largeMuscles = [
+              "m-chest",
+              "m-lats",
+              "m-quads",
+              "m-hamstrings",
+              "m-glutes",
+              "m-lower-back",
+            ];
+            const isCompound = ex.muscles.primary.some((m) =>
+              largeMuscles.includes(m),
+            );
+            if (isCompound) {
+              remainingSeconds = 90;
+            }
+          }
+        }
+        window.updateTimerDisplay();
+      };
+
+      window.updateTimerDisplay = () => {
+        const m = Math.floor(remainingSeconds / 60);
+        const s = remainingSeconds % 60;
+        document.getElementById("timer-display").innerText =
+          `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      };
+
+      window.startTimer = () => {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          remainingSeconds--;
+          if (remainingSeconds <= 0) {
+            clearInterval(timerInterval);
+            alert("⏱️ استراحت تمام شد!");
+          }
+          window.updateTimerDisplay();
+        }, 1000);
+      };
+
+      window.closeTimer = () => {
+        clearInterval(timerInterval);
+        document.getElementById("timer-modal").style.display = "none";
+      };
+      // ==============================
+
       window.getCurrentWorkoutContext = () => {
         if (!currentRoutine || currentRoutine === "rest") {
           return "کاربر هنوز برنامه‌ای برای امروز انتخاب نکرده یا در روز استراحت است.";
@@ -1524,8 +2043,6 @@
         return context;
       };
 
-      // توابع مربوط به چت جمنای
-      // دریافت کلید امن از حافظه مرورگر
       let GEMINI_API_KEY = localStorage.getItem("MY_GEMINI_KEY");
 
       if (!GEMINI_API_KEY) {
@@ -1544,7 +2061,6 @@
 
         if (!userText) return;
 
-        // ۱. نمایش پیام کاربر (با استایل راست‌چین)
         historyEl.innerHTML += `
                 <div style="align-self: flex-end; background: #2e7d32; padding: 8px 12px; border-radius: 8px; border-top-right-radius: 0; color: white; max-width: 85%; direction: rtl; text-align: right;">
                   ${userText}
@@ -1564,10 +2080,8 @@
                 </div>`;
         historyEl.scrollTop = historyEl.scrollHeight;
 
-        // --- آپشن جدید: تزریق اطلاعات زنده به پیام ارسالی (بدون نمایش به کاربر) ---
         let payloadContents = JSON.parse(JSON.stringify(conversationHistory));
 
-        // فراخوانی تابع خواندن وضعیت تمرین (باید این تابع را قبلاً در کدهایت اضافه کرده باشی)
         const liveContext =
           typeof window.getCurrentWorkoutContext === "function"
             ? window.getCurrentWorkoutContext()
@@ -1576,17 +2090,15 @@
         const hiddenSystemPrompt = `[یادداشت سیستمی مخفی:\n${liveContext}\nپایان یادداشت]\n\nسوال کاربر: `;
         payloadContents[payloadContents.length - 1].parts[0].text =
           hiddenSystemPrompt + userText;
-        // ------------------------------------------------------------------------
 
         try {
           const response = await fetch(
-            // نکته: نسخه مدل به 1.5 تغییر یافت تا درخواست به درستی پردازش شود
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                contents: payloadContents, // استفاده از دیتای حاوی پیام مخفی برای سرور
+                contents: payloadContents,
               }),
             },
           );
@@ -1603,11 +2115,8 @@
               parts: [{ text: aiText }],
             });
 
-            // این همان قسمتی است که مارک‌داون (ستاره‌ها و هشتگ‌ها) را به HTML تمیز تبدیل می‌کند
             const htmlText = marked.parse(aiText);
 
-            // ۲. نمایش پیام هوش مصنوعی (با استایل راست‌چین و بدون مشکل ستاره‌ها)
-            // ۲. نمایش پیام هوش مصنوعی (با استایل راست‌چین و دکمه تمام صفحه)
             const msgId = "ai-msg-" + Date.now();
             historyEl.innerHTML += `
                     <div style="align-self: flex-start; background: #333; padding: 12px; border-radius: 8px; border-top-left-radius: 0; color: #e0e0e0; max-width: 85%; line-height: 1.6; direction: rtl; text-align: right; position: relative;">
