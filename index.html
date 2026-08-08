@@ -587,7 +587,6 @@
           </div>
         </div>
         <div style="display: flex; gap: 8px">
-          <!-- textarea برای تایپ راحت و خوانای متن -->
           <textarea
             id="chat-input"
             dir="auto"
@@ -656,7 +655,7 @@
       </div>
     </div>
 
-    <!-- Modal اطلاعات حرکت -->
+    <!-- Modal اطلاعات حرکت با تگ ویدیو برای لوپ زدن -->
     <div
       id="exercise-info-modal"
       style="
@@ -688,21 +687,23 @@
           id="info-modal-title"
           style="margin-top: 0; color: #ff9800; text-align: right"
         ></h3>
-        <!-- عکس اختصاصی حرکت که از ویژگی infoImg پر میشه -->
-        <img
-          id="info-modal-img"
-          src=""
+        <!-- ویدیو با قابلیت پخش خودکار، بدون صدا و لوپ -->
+        <video
+          id="info-modal-video"
+          autoplay
+          loop
+          muted
+          playsinline
           style="
             width: 100%;
-            max-height: 200px;
+            max-height: 220px;
             object-fit: cover;
             border-radius: 8px;
             margin-bottom: 15px;
             background: #333;
+            display: none;
           "
-          alt="تصویر حرکت"
-        />
-        <!-- متن اختصاصی حرکت که از ویژگی infoDesc پر میشه -->
+        ></video>
         <p
           id="info-modal-desc"
           style="
@@ -710,12 +711,17 @@
             color: #e0e0e0;
             text-align: right;
             line-height: 1.6;
+            padding: 10px;
+            background: rgba(255, 152, 0, 0.1);
+            border-radius: 8px;
+            border-right: 3px solid #ff9800;
           "
         ></p>
         <button
           onclick="
             document.getElementById('exercise-info-modal').style.display =
-              'none'
+              'none';
+            document.getElementById('info-modal-video').pause();
           "
           style="
             background: #555;
@@ -742,7 +748,6 @@
       <button class="fab-btn" onclick="window.toggleFabMenu()">+</button>
     </div>
 
-    <!-- تایمر به جای مدال کل صفحه، تبدیل شد به یه باکس کوچیک بالای صفحه -->
     <div
       id="timer-widget"
       style="
@@ -815,7 +820,6 @@
       </button>
     </div>
 
-    <!-- فول اسکرین برای چت ها -->
     <div
       id="fullscreen-modal"
       style="
@@ -903,6 +907,7 @@
       const db = getFirestore(app);
 
       // ۱. مخزن تمام برنامه‌های ورزشی شما
+      // به تمام حرکات، ویژگی‌های اختصاصی infoDesc (نکته فارسی متفاوت) و infoVideo (لینک ویدیو) اضافه شد.
       const workoutPrograms = {
         program_1: {
           push: [
@@ -914,9 +919,9 @@
               type: "weight-rep",
               note: "Heavy load, touch chest lightly.",
               infoDesc:
-                "نکات طلایی پرس سینه: سعی کنید شانه‌ها را به سمت پایین و عقب قفل کنید تا سینه کاملاً باز شود. هالتر دقیقاً روی خط سینه پایین بیاید.",
-              infoImg:
-                "https://via.placeholder.com/450x200.png?text=Bench+Press+Demo",
+                "نکات طلایی پرس سینه: سعی کنید شانه‌ها را به سمت پایین و عقب قفل کنید تا سینه کاملاً باز شود. هالتر دقیقاً روی خط سینه پایین بیاید و آرنج‌ها زاویه حدود ۴۵ تا ۶۰ درجه با بدن بسازند.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Barbell-Bench-Press.mp4",
               muscles: {
                 primary: ["m-chest"],
                 secondary: ["m-delts-front", "m-triceps"],
@@ -929,6 +934,10 @@
               target: "10-12 reps",
               type: "weight-rep",
               note: "Focus on upper chest volume.",
+              infoDesc:
+                "نکته پرس بالاسینه دمبل: شیب نیمکت باید بین ۳۰ تا حداکثر ۴۵ درجه باشد تا فشار اصلی روی بخش بالایی سینه قرار بگیرد و به سرشانه منتقل نشود.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Incline-Dumbbell-Press.mp4",
               muscles: { primary: ["m-chest"], secondary: ["m-delts-front"] },
             },
             {
@@ -938,6 +947,10 @@
               target: "10 reps",
               type: "weight-rep",
               note: "Full rotation for shoulder width.",
+              infoDesc:
+                "نکته پرس آرنولدی: در پایین‌ترین نقطه کف دست‌ها باید به سمت صورت باشند. همزمان با بالا بردن، دست‌ها را بچرخانید تا در بالاترین نقطه کف دست‌ها رو به بیرون قرار بگیرند.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Arnold-Dumbbell-Press.mp4",
               muscles: { primary: ["m-delts-front"], secondary: ["m-triceps"] },
             },
             {
@@ -947,6 +960,10 @@
               target: "15 reps",
               type: "weight-rep",
               note: "Strict form, no swinging.",
+              infoDesc:
+                "نکته نشر جانب: آرنج‌ها را کمی خم نگه دارید و هرگز دست‌ها را بالاتر از سطح شانه نیاورید. از تاب دادن بدن برای بالا بردن وزنه‌ها جداً خودداری کنید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Dumbbell-Lateral-Raise.mp4",
               muscles: {
                 primary: ["m-delts-front", "m-delts-rear"],
                 secondary: [],
@@ -959,6 +976,9 @@
               target: "12-15 reps",
               type: "weight-rep",
               note: "Squeeze at the bottom.",
+              infoDesc:
+                "نکته پشت بازو سیم‌کش: بازوها را کاملاً به پهلوها بچسبانید و فقط از مفصل آرنج برای پایین کشیدن سیم‌کش استفاده کنید. در پایین‌ترین نقطه عضله را یک ثانیه منقبض کنید.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Triceps-Pushdown.mp4",
               muscles: { primary: ["m-triceps"], secondary: [] },
             },
             {
@@ -968,6 +988,9 @@
               target: "Failure",
               type: "rep-only",
               note: "Great for tricep endurance.",
+              infoDesc:
+                "نکته دیپ روی نیمکت: فاصله دست‌ها دقیقاً به عرض شانه باشد. کمر را در تمام طول حرکت نزدیک به لبه نیمکت نگه دارید تا فشار از روی سرشانه برداشته شود.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Bench-Dips.mp4",
               muscles: { primary: ["m-triceps"], secondary: ["m-chest"] },
             },
           ],
@@ -979,6 +1002,9 @@
               target: "10 reps",
               type: "weight-rep",
               note: "Pull with elbows, not hands.",
+              infoDesc:
+                "نکته لت سیم‌کش: میله را نهایتاً تا قسمت بالایی سینه پایین بیاورید. بدن را کمی به عقب متمایل کنید و تصور کنید که با آرنج‌هایتان وزنه‌ها را به پایین می‌کشید، نه با دست‌هایتان.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Lat-Pulldown.mp4",
               muscles: { primary: ["m-lats"], secondary: ["m-biceps"] },
             },
             {
@@ -988,6 +1014,10 @@
               target: "10 reps",
               type: "weight-rep",
               note: "Stretch the lat at the bottom.",
+              infoDesc:
+                "نکته زیربغل دمبل تک دست: کمر باید کاملاً صاف و موازی با زمین باشد. دمبل را به صورت هلالی به سمت لگن یا زیر شکم خود بکشید تا بهترین انقباض را در زیربغل حس کنید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/One-Arm-Dumbbell-Row.mp4",
               muscles: {
                 primary: ["m-lats"],
                 secondary: ["m-biceps", "m-traps", "m-lower-back"],
@@ -1000,6 +1030,9 @@
               target: "15 reps",
               type: "weight-rep",
               note: "Pull to face, hold for 1 sec.",
+              infoDesc:
+                "نکته فیس پول: طناب را مستقیماً به سمت صورت (حدود سطح چشم یا پیشانی) بکشید و همزمان شانه‌ها را به سمت عقب و پایین هدایت کنید.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Face-Pull.mp4",
               muscles: {
                 primary: ["m-delts-rear", "m-traps"],
                 secondary: ["m-lats"],
@@ -1012,6 +1045,10 @@
               target: "12 reps",
               type: "weight-rep",
               note: "Expand the ribcage, slow tempo.",
+              infoDesc:
+                "نکته پلاور دمبل: فقط قسمت بالایی پشت و شانه‌ها را روی نیمکت قرار دهید (بدن عمود بر نیمکت). لگن را پایین نگه دارید تا در هنگام پایین رفتنِ دمبل، کشش عمیقی در قفسه سینه ایجاد شود.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Dumbbell-Pullover.mp4",
               muscles: { primary: ["m-lats"], secondary: ["m-chest"] },
             },
             {
@@ -1021,6 +1058,9 @@
               target: "10-12 reps",
               type: "weight-rep",
               note: "Squeeze biceps hard at top.",
+              infoDesc:
+                "نکته جلو بازو هالتر لاری/خم: در بالاترین نقطه عضله جلو بازو را به شدت منقبض کنید. در هنگام پایین آوردن، دست‌ها را به طور کامل و تا مرز قفل شدن مفصل باز نکنید تا فشار روی مفصل نیفتد.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/EZ-Bar-Curl.mp4",
               muscles: { primary: ["m-biceps"], secondary: ["m-forearms"] },
             },
             {
@@ -1030,6 +1070,9 @@
               target: "12 reps",
               type: "weight-rep",
               note: "Improves grip and arm thickness.",
+              infoDesc:
+                "نکته جلو بازو چکشی: دمبل‌ها را در حالت عمودی (مثل گرفتن چکش) نگه دارید. بالاتنه را کاملاً ثابت نگه دارید و از تاب دادن بدن برای بلند کردن دمبل‌ها خودداری کنید.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Hammer-Curl.mp4",
               muscles: { primary: ["m-biceps", "m-forearms"], secondary: [] },
             },
           ],
@@ -1041,6 +1084,9 @@
               target: "8-10 reps",
               type: "weight-rep",
               note: "Deep reps, chest up.",
+              infoDesc:
+                "نکته اسکات هالتر: سینه را همیشه بالا نگه دارید و نگاهتان رو به جلو باشد. در حین پایین رفتن، زانوها باید دقیقاً در راستای نوک پنجه‌های پا حرکت کنند.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Barbell-Squat.mp4",
               muscles: {
                 primary: ["m-quads", "m-glutes"],
                 secondary: ["m-hamstrings", "m-lower-back"],
@@ -1053,6 +1099,9 @@
               target: "12/leg reps",
               type: "weight-rep",
               note: "Boosts balance and endurance.",
+              infoDesc:
+                "نکته لانگز با دمبل: قدم‌ها را طوری بردارید که در پایین‌ترین حالت حرکت، هر دو زانوی جلو و عقب زاویه‌ای در حدود ۹۰ درجه بسازند. بالاتنه را کاملاً عمود نگه دارید.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Dumbbell-Lunges.mp4",
               muscles: {
                 primary: ["m-quads", "m-glutes"],
                 secondary: ["m-hamstrings"],
@@ -1065,6 +1114,10 @@
               target: "12-15 reps",
               type: "weight-rep",
               note: "Control weight on the way down.",
+              infoDesc:
+                "نکته پشت پا دمبل (خوابیده): دمبل را به طور محکم بین کف پاها نگه دارید. حرکت را کاملاً آهسته انجام دهید و به خصوص در مسیر پایین آوردن، مقاومت و کنترل کامل داشته باشید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Dumbbell-Leg-Curl.mp4",
               muscles: { primary: ["m-hamstrings"], secondary: ["m-calves"] },
             },
             {
@@ -1074,6 +1127,10 @@
               target: "20 reps",
               type: "weight-rep",
               note: "Full stretch at the bottom.",
+              infoDesc:
+                "نکته ساق پا ایستاده: دامنه حرکتی در این تمرین همه‌چیز است! در پایین‌ترین نقطه اجازه دهید پاشنه‌ها تا جای ممکن پایین بروند و در بالا یک ثانیه کامل روی پنجه مکث کنید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Standing-Calf-Raises.mp4",
               muscles: { primary: ["m-calves"], secondary: [] },
             },
             {
@@ -1083,6 +1140,9 @@
               target: "15-20 reps",
               type: "rep-only",
               note: "Don’t let feet touch the floor.",
+              infoDesc:
+                "نکته زیرشکم خوابیده: مهم‌ترین قانون این است که قسمت پایینی کمر شما باید در تمام طول حرکت کاملاً به زمین چسبیده باشد. پاها در پایین رفتن نباید زمین را لمس کنند.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Lying-Leg-Raises.mp4",
               muscles: { primary: ["m-abs"], secondary: ["m-quads"] },
             },
             {
@@ -1092,6 +1152,9 @@
               target: "Max",
               type: "time",
               note: "Total core stability.",
+              infoDesc:
+                "نکته پلانک: بدن باید از سر تا پاشنه‌ها در یک خط کاملاً مستقیم باشد. باسن را نه بیش از حد بالا بیاورید و نه اجازه دهید به سمت زمین خم شود. عضلات شکم و باسن را منقبض نگه دارید.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Plank.mp4",
               muscles: {
                 primary: ["m-abs"],
                 secondary: ["m-obliques", "m-lower-back"],
@@ -1108,6 +1171,10 @@
               target: "8, 8, 6-8, 6-8",
               type: "weight-rep",
               note: "Slow eccentric, pause on chest (RIR 1-2).",
+              infoDesc:
+                "نکته فاز سنگین پرس سینه: در این برنامه سرعت پایین آوردن (اکسنتریک) را کنترل کنید، روی سینه مکث کوتاهی داشته باشید و سپس با قدرت هالتر را پرس کنید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Barbell-Bench-Press.mp4",
               muscles: {
                 primary: ["m-chest"],
                 secondary: ["m-delts-front", "m-triceps"],
@@ -1120,6 +1187,10 @@
               target: "10-12 reps",
               type: "weight-rep",
               note: "Focus on upper chest volume. 90s rest.",
+              infoDesc:
+                "نکته بالاسینه دمبل: وقتی دمبل‌ها را پایین می‌آورید، کشش عمیقی در بالای سینه احساس کنید. آرنج‌ها به جای اینکه کاملاً باز باشند، با زاویه ۴۵ درجه به بدن نزدیک باشند.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Incline-Dumbbell-Press.mp4",
               muscles: { primary: ["m-chest"], secondary: ["m-delts-front"] },
             },
             {
@@ -1129,6 +1200,10 @@
               target: "12-15 reps",
               type: "weight-rep",
               note: "Low to high. Deep stretch for the chest.",
+              infoDesc:
+                "نکته قفسه سینه سیم‌کش (پایین به بالا): دستگیره‌های سیم‌کش را در پایین‌ترین نقطه تنظیم کنید. هدف این حرکت درگیر کردن بخش بالایی و داخلی سینه است. در اوج حرکت دست‌ها را کاملاً به هم برسانید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Low-Cable-Crossover.mp4",
               muscles: { primary: ["m-chest"], secondary: ["m-delts-front"] },
             },
             {
@@ -1138,6 +1213,10 @@
               target: "8-10 reps",
               type: "weight-rep",
               note: "Seated DB press for raw shoulder mass.",
+              infoDesc:
+                "نکته پرس سرشانه دمبل نشسته: کمر را به پشتی نیمکت محکم تکیه دهید. دمبل‌ها را تقریباً تا کنار گوش‌ها پایین بیاورید و در هنگام بالا بردن از کوبیدن آن‌ها به یکدیگر جلوگیری کنید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Seated-Dumbbell-Press.mp4",
               muscles: { primary: ["m-delts-front"], secondary: ["m-triceps"] },
             },
             {
@@ -1147,6 +1226,10 @@
               target: "15-20 reps",
               type: "weight-rep",
               note: "Unilateral. Full control on the eccentric phase.",
+              infoDesc:
+                "نکته نشر جانب سیم‌کش تک دست: مزیت سیم‌کش این است که عضله سرشانه در تمام طول مسیر تحت فشار است. حرکت را با کنترل کامل انجام دهید و اجازه ندهید وزنه دستتان را بکشد.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Cable-Lateral-Raise.mp4",
               muscles: {
                 primary: ["m-delts-front", "m-delts-rear"],
                 secondary: [],
@@ -1159,6 +1242,10 @@
               target: "10-12 reps",
               type: "weight-rep",
               note: "Focus on the long head of the triceps.",
+              infoDesc:
+                "نکته پشت بازو بالای سر با کابل: برای بیشترین درگیریِ «سر دراز» پشت بازو، بازوها را در نزدیک گوش‌ها ثابت نگه دارید و فقط ساعد را باز و بسته کنید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Overhead-Cable-Triceps-Extension.mp4",
               muscles: { primary: ["m-triceps"], secondary: [] },
             },
             {
@@ -1168,6 +1255,10 @@
               target: "12-15 reps",
               type: "weight-rep",
               note: "Rope pushdown for combined triceps growth.",
+              infoDesc:
+                "نکته پشت بازو طناب: در پایین‌ترین بخش حرکت، مچ دست‌ها را به سمت بیرون و پایین بچرخانید تا عضله پشت بازو تا بیشترین حد ممکن منقبض شود.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Triceps-Rope-Pushdown.mp4",
               muscles: { primary: ["m-triceps"], secondary: [] },
             },
             {
@@ -1177,6 +1268,9 @@
               target: "Near Failure",
               type: "rep-only",
               note: "Take it near failure, but not absolute.",
+              infoDesc:
+                "نکته دیپ نیمکت (فاز پایانی): در این ست‌ها تمرکز روی رسیدن به نزدیک ناتوانی عضله است. می‌توانید برای سخت‌تر شدن حرکت، پاهای خود را روی یک نیمکت دیگر قرار دهید.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Bench-Dips.mp4",
               muscles: { primary: ["m-triceps"], secondary: ["m-chest"] },
             },
           ],
@@ -1188,6 +1282,9 @@
               target: "10, 10, 8, 8",
               type: "weight-rep",
               note: "Drive elbows down into your pockets.",
+              infoDesc:
+                "نکته لت سیم‌کش (قدرتی): تصور کنید می‌خواهید آرنج‌هایتان را در جیب‌های شلوارتان فرو کنید. این تصویرسازی ذهنی باعث می‌شود فشار کاملاً از روی بازوها به زیربغل منتقل شود.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Lat-Pulldown.mp4",
               muscles: { primary: ["m-lats"], secondary: ["m-biceps"] },
             },
             {
@@ -1197,6 +1294,10 @@
               target: "8-10 reps",
               type: "weight-rep",
               note: "Chest supported. Zero strain on the lower back.",
+              infoDesc:
+                "نکته قایقی/زیربغل با تکیه‌گاه سینه: این حرکت فشار را به طور کامل از روی فیله کمر برمی‌دارد. در طول کشیدن وزنه به عقب، اصلاً سینه خود را از نیمکت جدا نکنید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Chest-Supported-Row.mp4",
               muscles: {
                 primary: ["m-lats", "m-traps"],
                 secondary: ["m-biceps", "m-lower-back"],
@@ -1209,6 +1310,10 @@
               target: "12-15 reps",
               type: "weight-rep",
               note: "Excellent for building a wider back (V-Taper).",
+              infoDesc:
+                "نکته زیربغل سیم‌کش دست صاف: دست‌ها باید تقریباً صاف (با خمیدگی بسیار جزئی در آرنج) باشند. میله را با استفاده از انقباض عضلات زیربغل به سمت ران‌های خود بکشید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Straight-Arm-Pulldown.mp4",
               muscles: { primary: ["m-lats"], secondary: ["m-triceps"] },
             },
             {
@@ -1218,6 +1323,9 @@
               target: "15-20 reps",
               type: "weight-rep",
               note: "Crucial for shoulder health and posture.",
+              infoDesc:
+                "نکته فیس پول (اصلاح وضعیت): یکی از بهترین حرکات برای رفع قوز کمر و سلامت شانه است. هنگام کشیدن طناب به عقب، سعی کنید بازوها هم‌سطح شانه‌ها قرار بگیرند.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Face-Pull.mp4",
               muscles: {
                 primary: ["m-delts-rear", "m-traps"],
                 secondary: ["m-lats"],
@@ -1230,6 +1338,10 @@
               target: "15-20 reps",
               type: "weight-rep",
               note: "Machine or cable fly for posture correction.",
+              infoDesc:
+                "نکته فلای پشت سرشانه (دستگاه/کابل): بالاتنه را ثابت نگه دارید و شانه‌ها را به سمت گوش بالا ندهید. تیغه‌های شانه را در انتهای حرکت به هم نزدیک و منقبض کنید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Reverse-Machine-Fly.mp4",
               muscles: { primary: ["m-delts-rear"], secondary: ["m-traps"] },
             },
             {
@@ -1239,6 +1351,9 @@
               target: "8-10 reps",
               type: "weight-rep",
               note: "Strict form. Take the last set to failure.",
+              infoDesc:
+                "نکته جلو بازو هالتر (قدرتی): فرم حرکت را کاملاً حفظ کنید. در آخرین ست می‌توانید برای رسیدن به ناتوانی، در دو تکرار آخر کمی از تکنیک تقلب (Cheating) و تاب دادن ملایم استفاده کنید.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/EZ-Bar-Curl.mp4",
               muscles: { primary: ["m-biceps"], secondary: ["m-forearms"] },
             },
             {
@@ -1248,6 +1363,10 @@
               target: "10-12 reps",
               type: "weight-rep",
               note: "Deep stretch on the incline for bicep growth.",
+              infoDesc:
+                "نکته جلو بازو دمبل روی نیمکت شیب‌دار: شیب نیمکت باعث می‌شود بازوها عقب‌تر از بدن قرار بگیرند و عضله جلو بازو قبل از شروع انقباض، کشش بسیار عمیقی را تجربه کند که برای رشد عالی است.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Incline-Dumbbell-Curl.mp4",
               muscles: { primary: ["m-biceps"], secondary: [] },
             },
             {
@@ -1257,6 +1376,9 @@
               target: "12-15 reps",
               type: "weight-rep",
               note: "Targets the brachialis. Last set to failure.",
+              infoDesc:
+                "نکته جلو بازو چکشی (پایانی): این حرکت عضله بازویی (Brachialis) که زیر عضله دوسر قرار دارد را هدف قرار می‌دهد و باعث ضخیم‌تر به نظر رسیدن بازوها از نمای روبرو می‌شود.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Hammer-Curl.mp4",
               muscles: { primary: ["m-biceps", "m-forearms"], secondary: [] },
             },
           ],
@@ -1268,6 +1390,9 @@
               target: "8, 8, 6, 6",
               type: "weight-rep",
               note: "The core leg movement. Keep form tight on heavy weight.",
+              infoDesc:
+                "نکته اسکات هالتر (افزایش رکورد): در ست‌های سنگین، نفس کشیدن حیاتی است. قبل از پایین رفتن یک نفس عمیق شکمی بکشید (مانور والسالوا) تا هسته بدن سفت شود و در هنگام بالا آمدن بازدم کنید.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Barbell-Squat.mp4",
               muscles: {
                 primary: ["m-quads", "m-glutes"],
                 secondary: ["m-hamstrings", "m-lower-back"],
@@ -1280,6 +1405,10 @@
               target: "8-10 reps",
               type: "weight-rep",
               note: "Focus on hip hinge and extension.",
+              infoDesc:
+                "نکته ددلیفت رومانیایی: زانوها فقط به مقدار بسیار کمی خم می‌شوند. حرکت اصلی شامل هل دادن لگن به سمت عقب است. هالتر باید در تمام طول حرکت مماس با ساق و ران پاهای شما بالا و پایین برود.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Romanian-Deadlift.mp4",
               muscles: {
                 primary: ["m-hamstrings", "m-glutes"],
                 secondary: ["m-lower-back"],
@@ -1292,6 +1421,10 @@
               target: "10/leg reps",
               type: "weight-rep",
               note: "Great unilateral work for quads and glutes.",
+              infoDesc:
+                "نکته اسکات بلغاری: پای عقب فقط روی نیمکت قرار می‌گیرد تا تعادل حفظ شود و نباید نیرویی به آن وارد شود. تمام فشار و تمرکز باید روی پایی باشد که روی زمین قرار دارد.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Bulgarian-Split-Squat.mp4",
               muscles: {
                 primary: ["m-quads", "m-glutes"],
                 secondary: ["m-hamstrings"],
@@ -1304,6 +1437,9 @@
               target: "10-12 reps",
               type: "weight-rep",
               note: "Take the last set close to failure.",
+              infoDesc:
+                "نکته پشت پا دستگاه نشسته/خوابیده: در هنگام انقباض مفصل زانو، لگن خود را محکم به تشک صندلی فشار دهید تا از بلند شدن کمر و تقلب در انجام حرکت جلوگیری شود.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Lying-Leg-Curl.mp4",
               muscles: { primary: ["m-hamstrings"], secondary: ["m-calves"] },
             },
             {
@@ -1313,6 +1449,10 @@
               target: "12-15 reps",
               type: "weight-rep",
               note: "Go heavy. Pause at top, full stretch at bottom.",
+              infoDesc:
+                "نکته ساق پا دستگاه (سنگین): وزنه‌های سنگین‌تری انتخاب کنید. در نقطه پایین اجازه دهید تاندون آشیل به خوبی کشیده شود و به هیچ‌وجه از حالت فنری برای پرتاب وزنه به بالا استفاده نکنید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Standing-Calf-Raises.mp4",
               muscles: { primary: ["m-calves"], secondary: [] },
             },
             {
@@ -1322,6 +1462,10 @@
               target: "12-15 reps",
               type: "rep-only",
               note: "Swap to lying leg raises if this is too hard.",
+              infoDesc:
+                "نکته زیرشکم خلبانی آویزان: به جای تمرکز روی بالا آوردن پاها، تمرکزتان را روی چرخاندن و بالا کشیدن لگن به سمت سینه معطوف کنید. درنگ کوتاهی در بالا داشته باشید تا تاب نخورید.",
+              infoVideo:
+                "https://dl.mrgym.ir/mrgym-media/Hanging-Leg-Raise.mp4",
               muscles: { primary: ["m-abs"], secondary: ["m-quads"] },
             },
             {
@@ -1331,6 +1475,9 @@
               target: "60-90 sec",
               type: "time",
               note: "Add weight once you can easily hold for 90 seconds.",
+              infoDesc:
+                "نکته پلانک پیشرفته: اگر نگه داشتن وزن بدن برایتان آسان شده، می‌توانید از یک یار تمرینی بخواهید یک صفحه وزنه روی قسمت بالایی پشت شما قرار دهد تا مقاومت افزایش یابد.",
+              infoVideo: "https://dl.mrgym.ir/mrgym-media/Plank.mp4",
               muscles: {
                 primary: ["m-abs"],
                 secondary: ["m-obliques", "m-lower-back"],
@@ -1574,7 +1721,6 @@
 
         if (!exId || !currentRoutine) {
           if (anatomyContainer && workoutSection) {
-            // این کد نقشه رو به بالاترین بخش برمی‌گردونه تا گم نشه
             workoutSection.insertBefore(
               anatomyContainer,
               workoutSection.firstChild,
@@ -1620,8 +1766,6 @@
 
         const container = document.getElementById("exercises-container");
 
-        // نجات دادن نقشه عضلات: تابع زیر نقشه رو به جایگاه اصلیش برمیگردونه
-        // تا قبل از پاک شدن کانتینر، به طور کامل از خطر حذف شدن دور بشه.
         window.updateAnatomyMap(null);
 
         container.innerHTML = "";
@@ -1716,10 +1860,11 @@
         }
       };
 
-      // تابع نمایش اطلاعات هر حرکت در مودال
+      // تابع نمایش اطلاعات هر حرکت در مودال به همراه پخش ویدیو اختصاصی
       window.openExerciseInfo = (exId) => {
         const activeData = getActiveWorkoutData(selectedDateStr);
         const ex = activeData[currentRoutine].find((e) => e.id === exId);
+
         if (ex) {
           document.getElementById("info-modal-title").innerText = ex.name;
 
@@ -1728,11 +1873,18 @@
             "توضیحات تکمیلی برای این حرکت ثبت نشده است. لطفاً ویژگی infoDesc را در کد پر کنید.";
           document.getElementById("info-modal-desc").innerText = infoDescText;
 
-          const infoImgUrl =
-            ex.infoImg ||
-            "https://via.placeholder.com/450x200.png?text=" +
-              encodeURIComponent(ex.name);
-          document.getElementById("info-modal-img").src = infoImgUrl;
+          const videoEl = document.getElementById("info-modal-video");
+          if (ex.infoVideo) {
+            videoEl.src = ex.infoVideo;
+            videoEl.style.display = "block";
+            videoEl
+              .play()
+              .catch((e) => console.log("مرورگر اجازه پخش خودکار نداد", e));
+          } else {
+            videoEl.style.display = "none";
+            videoEl.pause();
+            videoEl.src = "";
+          }
 
           document.getElementById("exercise-info-modal").style.display = "flex";
         }
@@ -1946,7 +2098,6 @@
         document.getElementById("fullscreen-content").innerHTML = "";
       };
 
-      // === منطق تایمر غیرمزاحم و دکمه شناور ===
       let timerInterval;
       let remainingSeconds = 0;
       let isTimerRunning = false;
@@ -2168,6 +2319,16 @@
 
         historyEl.scrollTop = historyEl.scrollHeight;
       };
+
+      // ثبت Service Worker برای کش کردن و پخش آفلاین ویدیوها
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("./sw.js")
+            .then((reg) => console.log("✅ Service Worker Registered!"))
+            .catch((err) => console.error("❌ Service Worker Error:", err));
+        });
+      }
     </script>
   </body>
 </html>
