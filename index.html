@@ -55,6 +55,41 @@
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
       }
 
+      .timer-adjust-btn {
+        width: 28px;
+        height: 20px;
+        padding: 0;
+        border: none;
+        border-radius: 5px;
+        background: #333;
+        color: #ff9800;
+        font-size: 11px;
+        line-height: 18px;
+        cursor: pointer;
+      }
+      .timer-adjust-btn:hover {
+        background: #444;
+      }
+      .timer-adjust-btn:active {
+        transform: scale(0.94);
+      }
+      .timer-value {
+        min-width: 52px;
+        text-align: center;
+        font-size: 38px;
+        line-height: 44px;
+        font-weight: bold;
+        color: white;
+        font-variant-numeric: tabular-nums;
+      }
+      .timer-separator {
+        color: white;
+        font-size: 38px;
+        font-weight: bold;
+        line-height: 44px;
+        margin-top: 22px;
+      }
+
       /* Calendar Styles */
       .calendar-header {
         display: flex;
@@ -881,10 +916,121 @@
         <button
           class="btn-main"
           style="background-color: #2e7d32; color: white; margin-top: 5px"
-          onclick="exportDataForAI()"
+          onclick="window.openExportRangeModal()"
         >
           Copy Workout History 📋
         </button>
+      </div>
+    </div>
+
+    <!-- Modal انتخاب بازه خروجی -->
+    <div
+      id="export-range-modal"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.82);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+        direction: rtl;
+        padding: 20px;
+        box-sizing: border-box;
+      "
+    >
+      <div
+        style="
+          width: 100%;
+          max-width: 420px;
+          background: #222;
+          border: 1px solid #444;
+          border-radius: 14px;
+          padding: 20px;
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+        "
+      >
+        <h3 style="margin-top: 0">📋 انتخاب بازه خروجی</h3>
+        <p
+          style="
+            color: #aaa;
+            font-size: 13px;
+            text-align: center;
+            margin-bottom: 18px;
+          "
+        >
+          فقط اطلاعات ثبت‌شده بین این دو تاریخ در خروجی قرار می‌گیرد.
+        </p>
+        <div style="display: grid; gap: 12px">
+          <label style="font-weight: bold">
+            از تاریخ
+            <input
+              id="export-start-date"
+              type="date"
+              style="
+                width: 100%;
+                box-sizing: border-box;
+                margin-top: 6px;
+                padding: 10px;
+                border-radius: 8px;
+                border: 1px solid #555;
+                background: #111;
+                color: white;
+                font-size: 15px;
+              "
+            />
+          </label>
+          <label style="font-weight: bold">
+            تا تاریخ
+            <input
+              id="export-end-date"
+              type="date"
+              style="
+                width: 100%;
+                box-sizing: border-box;
+                margin-top: 6px;
+                padding: 10px;
+                border-radius: 8px;
+                border: 1px solid #555;
+                background: #111;
+                color: white;
+                font-size: 15px;
+              "
+            />
+          </label>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 18px">
+          <button
+            onclick="window.closeExportRangeModal()"
+            style="
+              flex: 1;
+              background: #555;
+              color: white;
+              border: none;
+              padding: 11px;
+              border-radius: 8px;
+              font-weight: bold;
+              cursor: pointer;
+            "
+          >
+            انصراف
+          </button>
+          <button
+            onclick="window.exportDataForAI()"
+            style="
+              flex: 1;
+              background: #2e7d32;
+              color: white;
+              border: none;
+              padding: 11px;
+              border-radius: 8px;
+              font-weight: bold;
+              cursor: pointer;
+            "
+          >
+            خروجی گرفتن 📋
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1023,17 +1169,66 @@
         </button>
       </div>
       <div
-        id="timer-display"
+        id="timer-controls"
         style="
-          font-size: 38px;
-          font-weight: bold;
-          color: white;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 12px;
           margin-bottom: 15px;
-          font-variant-numeric: tabular-nums;
         "
       >
-        01:30
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+          "
+        >
+          <button
+            class="timer-adjust-btn"
+            onclick="window.adjustTimer('minutes', 1)"
+            aria-label="افزایش دقیقه"
+          >
+            ▲
+          </button>
+          <div id="timer-minutes" class="timer-value">01</div>
+          <button
+            class="timer-adjust-btn"
+            onclick="window.adjustTimer('minutes', -1)"
+            aria-label="کاهش دقیقه"
+          >
+            ▼
+          </button>
+        </div>
+        <div class="timer-separator">:</div>
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+          "
+        >
+          <button
+            class="timer-adjust-btn"
+            onclick="window.adjustTimer('seconds', 15)"
+            aria-label="افزایش 15 ثانیه"
+          >
+            ▲
+          </button>
+          <div id="timer-seconds" class="timer-value">30</div>
+          <button
+            class="timer-adjust-btn"
+            onclick="window.adjustTimer('seconds', -15)"
+            aria-label="کاهش 15 ثانیه"
+          >
+            ▼
+          </button>
+        </div>
       </div>
+      <div id="timer-display" style="display: none">01:30</div>
       <button
         id="timer-start-btn"
         onclick="window.startTimer()"
@@ -1518,7 +1713,8 @@
               note: "Drive elbows down into your pockets.",
               infoDesc:
                 "نکته لت سیم‌کش (قدرتی): تصور کنید می‌خواهید آرنج‌هایتان را در جیب‌های شلوارتان فرو کنید. این تصویرسازی ذهنی باعث می‌شود فشار کاملاً از روی بازوها به زیربغل منتقل شود.",
-              infoVideo: "https://video.mrgym.ir/Exercise/Lat%20Pulldown.mp4",
+              infoVideo:
+                "https://app-media-r2.fitbod.me/v2/211/videos/full_720p.mp4",
               muscles: { primary: ["m-lats"], secondary: ["m-biceps"] },
             },
             {
@@ -1547,7 +1743,7 @@
               infoDesc:
                 "نکته زیربغل سیم‌کش دست صاف: دست‌ها باید تقریباً صاف (با خمیدگی بسیار جزئی در آرنج) باشند. میله را با استفاده از انقباض عضلات زیربغل به سمت ران‌های خود بکشید.",
               infoVideo:
-                "https://dl.mrgym.ir/mrgym-media/Straight-Arm-Pulldown.mp4",
+                "https://app-media-r2.fitbod.me/v2/378/videos/full_720p.mp4",
               muscles: { primary: ["m-lats"], secondary: ["m-triceps"] },
             },
             {
@@ -1559,7 +1755,8 @@
               note: "Crucial for shoulder health and posture.",
               infoDesc:
                 "نکته فیس پول (اصلاح وضعیت): یکی از بهترین حرکات برای رفع قوز کمر و سلامت شانه است. هنگام کشیدن طناب به عقب، سعی کنید بازوها هم‌سطح شانه‌ها قرار بگیرند.",
-              infoVideo: "https://dl.mrgym.ir/mrgym-media/Face-Pull.mp4",
+              infoVideo:
+                "https://app-media-r2.fitbod.me/v2/138/videos/full_720p.mp4",
               muscles: {
                 primary: ["m-delts-rear", "m-traps"],
                 secondary: ["m-lats"],
@@ -1575,7 +1772,7 @@
               infoDesc:
                 "نکته فلای پشت سرشانه (دستگاه/کابل): بالاتنه را ثابت نگه دارید و شانه‌ها را به سمت گوش بالا ندهید. تیغه‌های شانه را در انتهای حرکت به هم نزدیک و منقبض کنید.",
               infoVideo:
-                "https://dl.mrgym.ir/mrgym-media/Reverse-Machine-Fly.mp4",
+                "https://app-media-r2.fitbod.me/v2/533/videos/full_720p.mp4",
               muscles: { primary: ["m-delts-rear"], secondary: ["m-traps"] },
             },
             {
@@ -1587,7 +1784,8 @@
               note: "Strict form. Take the last set to failure.",
               infoDesc:
                 "نکته جلو بازو هالتر (قدرتی): فرم حرکت را کاملاً حفظ کنید. در آخرین ست می‌توانید برای رسیدن به ناتوانی، در دو تکرار آخر کمی از تکنیک تقلب (Cheating) و تاب دادن ملایم استفاده کنید.",
-              infoVideo: "https://dl.mrgym.ir/mrgym-media/EZ-Bar-Curl.mp4",
+              infoVideo:
+                "https://app-media-r2.fitbod.me/v2/136/videos/full_720p.mp4",
               muscles: { primary: ["m-biceps"], secondary: ["m-forearms"] },
             },
             {
@@ -1600,7 +1798,7 @@
               infoDesc:
                 "نکته جلو بازو دمبل روی نیمکت شیب‌دار: شیب نیمکت باعث می‌شود بازوها عقب‌تر از بدن قرار بگیرند و عضله جلو بازو قبل از شروع انقباض، کشش بسیار عمیقی را تجربه کند که برای رشد عالی است.",
               infoVideo:
-                "https://dl.mrgym.ir/mrgym-media/Incline-Dumbbell-Curl.mp4",
+                "https://app-media-r2.fitbod.me/v2/178/videos/full_720p.mp4",
               muscles: { primary: ["m-biceps"], secondary: [] },
             },
             {
@@ -1612,7 +1810,8 @@
               note: "Targets the brachialis. Last set to failure.",
               infoDesc:
                 "نکته جلو بازو چکشی (پایانی): این حرکت عضله بازویی (Brachialis) که زیر عضله دوسر قرار دارد را هدف قرار می‌دهد و باعث ضخیم‌تر به نظر رسیدن بازوها از نمای روبرو می‌شود.",
-              infoVideo: "https://dl.mrgym.ir/mrgym-media/Hammer-Curl.mp4",
+              infoVideo:
+                "https://app-media-r2.fitbod.me/v2/158/videos/full_720p.mp4",
               muscles: { primary: ["m-biceps", "m-forearms"], secondary: [] },
             },
           ],
@@ -2258,18 +2457,77 @@
         });
       }
 
+      function jalaliDateToGregorianInput(dateStr) {
+        if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return "";
+        const [jy, jm, jd] = dateStr.split("-").map(Number);
+        const g = jalaali.toGregorian(jy, jm, jd);
+        return `${g.gy}-${String(g.gm).padStart(2, "0")}-${String(g.gd).padStart(2, "0")}`;
+      }
+
+      function gregorianInputToJalali(dateStr) {
+        if (!dateStr) return "";
+        const [gy, gm, gd] = dateStr.split("-").map(Number);
+        const j = jalaali.toJalaali(gy, gm, gd);
+        return `${j.jy}-${String(j.jm).padStart(2, "0")}-${String(j.jd).padStart(2, "0")}`;
+      }
+
+      window.openExportRangeModal = () => {
+        const modal = document.getElementById("export-range-modal");
+        const startInput = document.getElementById("export-start-date");
+        const endInput = document.getElementById("export-end-date");
+        const dates = [...savedDatesList].sort();
+
+        if (dates.length) {
+          startInput.value = jalaliDateToGregorianInput(dates[0]);
+          endInput.value = jalaliDateToGregorianInput(dates[dates.length - 1]);
+        } else {
+          const todayInput = `${todayG.getFullYear()}-${String(todayG.getMonth() + 1).padStart(2, "0")}-${String(todayG.getDate()).padStart(2, "0")}`;
+          startInput.value = todayInput;
+          endInput.value = todayInput;
+        }
+
+        modal.style.display = "flex";
+      };
+
+      window.closeExportRangeModal = () => {
+        document.getElementById("export-range-modal").style.display = "none";
+      };
+
       window.exportDataForAI = async () => {
+        const startInput = document.getElementById("export-start-date").value;
+        const endInput = document.getElementById("export-end-date").value;
+
+        if (!startInput || !endInput) {
+          alert("لطفاً تاریخ شروع و پایان را انتخاب کنید.");
+          return;
+        }
+
+        const startDate = gregorianInputToJalali(startInput);
+        const endDate = gregorianInputToJalali(endInput);
+
+        if (startDate > endDate) {
+          alert("❌ تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.");
+          return;
+        }
+
         showLoading(true);
         try {
           const logsSnapshot = await getDocs(collection(db, "daily_logs"));
-          let exportText = "گزارش تمرینات ورزشی من تا این لحظه:\n\n";
+          let exportText = `گزارش تمرینات ورزشی از ${startDate} تا ${endDate}:\n\n`;
           let logs = [];
 
           logsSnapshot.forEach((doc) => {
-            logs.push({ date: doc.id, data: doc.data() });
+            if (doc.id >= startDate && doc.id <= endDate) {
+              logs.push({ date: doc.id, data: doc.data() });
+            }
           });
 
           logs.sort((a, b) => a.date.localeCompare(b.date));
+
+          if (!logs.length) {
+            alert("⚠️ در بازه انتخاب‌شده هیچ اطلاعات تمرینی ثبت نشده است.");
+            return;
+          }
 
           logs.forEach((log) => {
             exportText += `📅 تاریخ: ${log.date}\n`;
@@ -2314,14 +2572,16 @@
           });
 
           await navigator.clipboard.writeText(exportText);
+          window.closeExportRangeModal();
           alert(
-            "✅ اطلاعات ورزش شما با موفقیت کپی شد! حالا می‌توانید آن را برای هوش مصنوعی Paste کنید.",
+            `✅ اطلاعات ${logs.length} روز از ${startDate} تا ${endDate} با موفقیت کپی شد!`,
           );
         } catch (e) {
           console.error(e);
           alert("❌ خطایی در خروجی گرفتن رخ داد.");
+        } finally {
+          showLoading(false);
         }
-        showLoading(false);
       };
 
       window.openFullScreen = (msgId) => {
@@ -2377,10 +2637,26 @@
       };
 
       window.updateTimerDisplay = () => {
-        const m = Math.floor(remainingSeconds / 60);
-        const s = remainingSeconds % 60;
+        const safeSeconds = Math.max(0, remainingSeconds);
+        const m = Math.floor(safeSeconds / 60);
+        const s = safeSeconds % 60;
+        document.getElementById("timer-minutes").innerText = String(m).padStart(
+          2,
+          "0",
+        );
+        document.getElementById("timer-seconds").innerText = String(s).padStart(
+          2,
+          "0",
+        );
         document.getElementById("timer-display").innerText =
           `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      };
+
+      window.adjustTimer = (unit, amount) => {
+        if (isTimerRunning) return;
+        const change = unit === "minutes" ? amount * 60 : amount;
+        remainingSeconds = Math.max(0, remainingSeconds + change);
+        window.updateTimerDisplay();
       };
 
       window.startTimer = () => {
