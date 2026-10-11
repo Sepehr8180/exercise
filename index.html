@@ -350,10 +350,15 @@
 
       .weight-chart-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0;direction:rtl}
       .weight-chart-nav button,.progress-btn{border:1px solid #555;background:#303030;color:#ffb74d;border-radius:8px;padding:6px 13px;cursor:pointer;font-size:18px}
-      .progress-btn{font-size:12px;padding:6px 10px;margin-top:8px}
+      .progress-btn{font-size:20px;padding:3px 8px;margin-top:8px;line-height:1.2;min-width:38px;min-height:34px}
       .previous-set{display:block;color:#ffb74d;font-size:10px;line-height:1.4;margin-top:2px;min-height:14px}
       .set-input-wrap{display:flex;flex-direction:column;min-width:0}
       .progress-legend{display:flex;gap:12px;flex-wrap:wrap;color:#ccc;font-size:12px}
+      .routine-guide{margin:8px 0 14px;background:#222;border:1px solid #444;border-radius:10px;overflow:hidden}
+      .routine-guide summary{cursor:pointer;padding:12px;color:#ffb74d;font-weight:700;list-style-position:inside}
+      .routine-guide .guide-content{padding:0 14px 12px;color:#ddd;font-size:14px;line-height:1.8}
+      .jalali-date-select{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:6px;margin-top:6px}
+      .jalali-date-select select{width:100%;padding:10px 4px;border-radius:8px;border:1px solid #555;background:#111;color:white;font-size:14px}
       .legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:4px}
       @media(max-width:420px){.set-row{grid-template-columns: .8fr 1.4fr 1.4fr;gap:5px}.set-row input{width:100%;box-sizing:border-box;padding:7px 2px}}
       /* Floating Action Button (FAB) */
@@ -979,39 +984,13 @@
         <div style="display: grid; gap: 12px">
           <label style="font-weight: bold">
             از تاریخ
-            <input
-              id="export-start-date"
-              type="date"
-              style="
-                width: 100%;
-                box-sizing: border-box;
-                margin-top: 6px;
-                padding: 10px;
-                border-radius: 8px;
-                border: 1px solid #555;
-                background: #111;
-                color: white;
-                font-size: 15px;
-              "
-            />
+            <div class="jalali-date-select" id="export-start-jalali"></div>
+            <input id="export-start-date" type="hidden" />
           </label>
           <label style="font-weight: bold">
             تا تاریخ
-            <input
-              id="export-end-date"
-              type="date"
-              style="
-                width: 100%;
-                box-sizing: border-box;
-                margin-top: 6px;
-                padding: 10px;
-                border-radius: 8px;
-                border: 1px solid #555;
-                background: #111;
-                color: white;
-                font-size: 15px;
-              "
-            />
+            <div class="jalali-date-select" id="export-end-jalali"></div>
+            <input id="export-end-date" type="hidden" />
           </label>
         </div>
         <div style="display: flex; gap: 10px; margin-top: 18px">
@@ -2212,6 +2191,27 @@
         }
       };
 
+      function getRoutineGuides(routineType) {
+        const guides = {
+          push: {
+            warmup: "۱) ۴ تا ۵ دقیقه راه رفتن تند یا دوچرخه ثابت. <br>۲) چرخش کنترل‌شده شانه و دست، ۱۰ تکرار در هر جهت. <br>۳) جمع‌کردن کتف‌ها و چرخش خارجی شانه با کش، هرکدام ۱۲ تا ۱۵ تکرار. <br>۴) قبل از اولین حرکت پرس، ۲ تا ۳ ست گرم‌کردنی با وزنه سبک و افزایش تدریجی بار؛ این ست‌ها را تا ناتوانی انجام نده.",
+            cooldown: "۱) ۲ تا ۳ دقیقه راه رفتن آرام و تنفس عمیق. <br>۲) کشش ملایم عضلات سینه کنار چارچوب در، هر سمت ۲۰ تا ۳۰ ثانیه. <br>۳) کشش پشت بازو و سرشانه، هرکدام ۲۰ تا ۳۰ ثانیه. <br>کشش‌ها باید ملایم باشند و درد ایجاد نکنند."
+          },
+          pull: {
+            warmup: "۱) ۴ تا ۵ دقیقه دستگاه روئینگ یا دوچرخه آرام. <br>۲) چرخش شانه و حرکت کنترل‌شده کتف‌ها، ۱۰ تا ۱۲ تکرار. <br>۳) کشش کشی سبک برای بازکردن شانه و فیس‌پول بسیار سبک، هرکدام ۱۲ تا ۱۵ تکرار. <br>۴) پیش از اولین حرکت کششی سنگین، ۲ تا ۳ ست گرم‌کردنی با وزنه سبک و افزایش تدریجی بار.",
+            cooldown: "۱) ۲ تا ۳ دقیقه راه رفتن آرام. <br>۲) کشش ملایم عضلات لت با گرفتن تکیه‌گاه، هر سمت ۲۰ تا ۳۰ ثانیه. <br>۳) کشش ساعد و جلو بازو، هر سمت ۲۰ تا ۳۰ ثانیه. <br>از تاب‌دادن بدن یا فشار آوردن تا حد درد خودداری کن."
+          },
+          legs: {
+            warmup: "۱) ۵ تا ۷ دقیقه دوچرخه ثابت یا تردمیل با سرعت آرام. <br>۲) اسکوات وزن بدن، ۱۰ تکرار؛ پل باسن، ۱۲ تکرار؛ لانج معکوس کنترل‌شده، ۶ تکرار برای هر پا. <br>۳) چند حرکت پویا برای مچ پا و لگن. <br>۴) قبل از اولین حرکت اصلی پا، ۲ تا ۴ ست گرم‌کردنی با وزنه سبک و افزایش تدریجی بار.",
+            cooldown: "۱) ۲ تا ۳ دقیقه راه رفتن آرام. <br>۲) کشش ملایم چهارسر ران، همسترینگ، باسن و ساق؛ هر حرکت ۲۰ تا ۳۰ ثانیه برای هر سمت. <br>۳) آرام و بدون فنرزدن کشش بده و اگر درد تیز یا غیرعادی داشتی متوقف شو."
+          }
+        };
+        return guides[routineType] || {
+          warmup: "۱) ۵ دقیقه فعالیت هوازی سبک. <br>۲) حرکات پویا و کنترل‌شده برای مفاصل درگیر. <br>۳) ۲ تا ۳ ست گرم‌کردنی سبک برای اولین حرکت اصلی.",
+          cooldown: "۱) ۲ تا ۳ دقیقه فعالیت آرام. <br>۲) کشش ملایم عضلاتی که تمرین داده‌ای، هرکدام ۲۰ تا ۳۰ ثانیه؛ بدون درد و فشار ناگهانی."
+        };
+      }
+
       window.selectRoutine = (routineType, savedExercises = null) => {
         currentRoutine = routineType;
         document
@@ -2239,6 +2239,8 @@
           "💾 Save Daily Workout";
         const activeData = getActiveWorkoutData(selectedDateStr);
         const exercises = activeData[routineType] || [];
+        const guideContent = getRoutineGuides(routineType);
+        container.innerHTML = `<details class="routine-guide"><summary>Warm-up</summary><div class="guide-content" dir="rtl">${guideContent.warmup}</div></details>`;
 
         exercises.forEach((ex, idx) => {
           let setInputsHtml = "";
@@ -2267,7 +2269,7 @@
               setInputsHtml += `
                                   <div class="set-row">
                                       <span>Set ${s}</span>
-                                      <div class="set-input-wrap"><input type="number" id="min-${ex.id}-${s}" placeholder="min" value="${savedMin}"><small class="previous-set">قبل: ${priorLabel}</small></div>
+                                      <div class="set-input-wrap"><input type="number" id="min-${ex.id}-${s}" placeholder="min" value="${savedMin}"><small class="previous-set">Last: ${priorLabel}</small></div>
                                       <div class="set-input-wrap"><input type="number" id="sec-${ex.id}-${s}" placeholder="sec" value="${savedSec}"></div>
                                   </div>
                               `;
@@ -2277,7 +2279,7 @@
                                   <div class="set-row">
                                       <span>Set ${s}</span>
                                       <div style="text-align:center; color:#666; font-size:12px;">Bodyweight</div>
-                                      <div class="set-input-wrap"><input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}"><small class="previous-set">قبل: ${priorLabel}</small></div>
+                                      <div class="set-input-wrap"><input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}"><small class="previous-set">Last: ${priorLabel}</small></div>
                                   </div>
                               `;
             } else {
@@ -2286,8 +2288,8 @@
               setInputsHtml += `
                                   <div class="set-row">
                                       <span>Set ${s}</span>
-                                      <div class="set-input-wrap"><input type="number" id="w-${ex.id}-${s}" placeholder="kg" value="${savedW}"><small class="previous-set">قبل: ${prior ? `${prior.w||"—"} kg` : "—"}</small></div>
-                                      <div class="set-input-wrap"><input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}"><small class="previous-set">قبل: ${prior ? `${prior.r||"—"} reps` : "—"}</small></div>
+                                      <div class="set-input-wrap"><input type="number" id="w-${ex.id}-${s}" placeholder="kg" value="${savedW}"><small class="previous-set">Last: ${prior ? `${prior.w||"—"} kg` : "—"}</small></div>
+                                      <div class="set-input-wrap"><input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}"><small class="previous-set">Last: ${prior ? `${prior.r||"—"} reps` : "—"}</small></div>
                                   </div>
                               `;
             }
@@ -2305,7 +2307,7 @@
                               </div>
                               ${setInputsHtml}
                               <div class="ex-note">💡 Focus: ${ex.note}</div>
-                              <button type="button" class="progress-btn" onclick="event.stopPropagation(); window.openExerciseProgress('${ex.id}','${ex.name.replace(/'/g, "\\'")}')">📈 نمودار پیشرفت حرکت</button>
+                              <button type="button" class="progress-btn" onclick="event.stopPropagation(); window.openExerciseProgress('${ex.id}','${ex.name.replace(/'/g, "\\'")}')" aria-label="Exercise progress chart" title="Exercise progress chart">📈</button>
                           </div>
                       `;
 
@@ -2313,6 +2315,8 @@
             setTimeout(() => window.updateAnatomyMap(ex.id), 100);
           }
         });
+
+        container.innerHTML += `<details class="routine-guide"><summary>Cool-down</summary><div class="guide-content" dir="rtl">${guideContent.cooldown}</div></details>`;
 
         if (savedExercises) {
           const firstKey = Object.keys(savedExercises)[0];
@@ -2428,33 +2432,31 @@
       window.shiftWeightChart = shiftWeightChart;
 
       function renderChart() {
-        const nowJ = jalaali.toJalaali(new Date().getFullYear(), new Date().getMonth()+1, new Date().getDate());
-        let startMonth = 7 + (weightChartSeasonOffset * 3);
+        const now = new Date();
+        const nowJ = jalaali.toJalaali(now.getFullYear(), now.getMonth()+1, now.getDate());
+        const seasonStartForMonth = (m) => m >= 4 && m <= 6 ? 4 : m >= 7 && m <= 9 ? 7 : m >= 10 && m <= 12 ? 10 : 1;
+        let startMonth = seasonStartForMonth(nowJ.jm);
         let year = nowJ.jy;
+        startMonth += weightChartSeasonOffset * 3;
         while (startMonth > 12) { startMonth -= 12; year++; }
         while (startMonth < 1) { startMonth += 12; year--; }
-        const months = [startMonth, ((startMonth)%12)+1, ((startMonth+1)%12)+1];
-        const years = months.map((m,i)=> (i===0 ? year : (m < months[i-1] ? year+1 : (i===2 && months[1] < months[0] ? year+1 : year))));
-        // Derive each month/year safely across year boundaries.
-        const monthDates = [];
-        let y=year,m=startMonth;
-        for(let i=0;i<3;i++){ monthDates.push({y,m}); m++; if(m>12){m=1;y++;} }
-        const seasonNames = {1:"زمستان",4:"بهار",7:"پاییز",10:"زمستان"};
-        document.getElementById("weight-chart-period").textContent =
-          `${seasonNames[startMonth] || monthNames[startMonth-1]} ${year} · ${monthNames[monthDates[2].m-1]}`;
-        const labels=[], dataPoints=[];
-        monthDates.forEach(({y,m})=>{
-          const days = jalaali.jalaaliMonthLength(y,m);
-          for(let d=1;d<=days;d++){
-            labels.push((d===1||d===15||d===days)?`${d} ${monthNames[m-1].slice(0,3)}`:"");
-            const dateStr=`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-            const entry=(window.weightHistory||[]).find(item=>item.date===dateStr);
-            dataPoints.push(entry?entry.weight:null);
+        const seasonName = startMonth === 1 ? 'Spring' : startMonth === 4 ? 'Summer' : startMonth === 7 ? 'Fall' : 'Winter';
+        document.getElementById('weight-chart-period').textContent = `${seasonName} ${year}`;
+        const labels = [], dataPoints = [];
+        let y = year, m = startMonth;
+        for (let i = 0; i < 3; i++) {
+          const days = jalaali.jalaaliMonthLength(y, m);
+          for (let d = 1; d <= days; d++) {
+            labels.push((d === 1 || d === 15) ? `${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')}` : '');
+            const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const entry = (window.weightHistory || []).find(item => item.date === dateStr);
+            dataPoints.push(entry ? entry.weight : null);
           }
-        });
-        const ctx=document.getElementById("weightChart").getContext("2d");
-        if(weightChartInstance) weightChartInstance.destroy();
-        weightChartInstance=new Chart(ctx,{type:"line",data:{labels,datasets:[{label:"Body Weight (kg)",data:dataPoints,borderColor:"#ff9800",backgroundColor:"rgba(255,152,0,.2)",borderWidth:2,pointBackgroundColor:"#fff",pointBorderColor:"#ff9800",pointRadius:3,spanGaps:true,tension:.2,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#e0e0e0"}}},scales:{x:{ticks:{color:"#aaa",maxRotation:0,autoSkip:false},grid:{color:"#333",display:false}},y:{ticks:{color:"#aaa"},grid:{color:"#333"}}}}});
+          m++; if (m > 12) { m = 1; y++; }
+        }
+        const ctx = document.getElementById('weightChart').getContext('2d');
+        if (weightChartInstance) weightChartInstance.destroy();
+        weightChartInstance = new Chart(ctx, {type:'line', data:{labels, datasets:[{label:'Body Weight (kg)', data:dataPoints, borderColor:'#ff9800', backgroundColor:'rgba(255,152,0,.12)', borderWidth:2, pointRadius:0, pointHoverRadius:4, spanGaps:true, tension:.2, fill:true}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#e0e0e0'}}}, scales:{x:{ticks:{color:'#aaa',maxRotation:0,minRotation:0,autoSkip:false},grid:{color:'#333',display:false}},y:{min:70,max:85,ticks:{color:'#aaa'},grid:{color:'#333'}}}}});
       }
 
       function jalaliDateToGregorianInput(dateStr) {
@@ -2471,21 +2473,35 @@
         return `${j.jy}-${String(j.jm).padStart(2, "0")}-${String(j.jd).padStart(2, "0")}`;
       }
 
+      function buildJalaliDateSelector(containerId, hiddenInputId, initialJalali) {
+        const host = document.getElementById(containerId);
+        const [iy, im, id] = initialJalali.split('-').map(Number);
+        const yearOptions = Array.from({length: 16}, (_, i) => iy - 8 + i);
+        host.innerHTML = `<select aria-label="سال" class="jy"></select><select aria-label="ماه" class="jm"></select><select aria-label="روز" class="jd"></select>`;
+        const ys=host.querySelector('.jy'), ms=host.querySelector('.jm'), ds=host.querySelector('.jd');
+        ys.innerHTML=yearOptions.map(v=>`<option value="${v}" ${v===iy?'selected':''}>${v}</option>`).join('');
+        ms.innerHTML=monthNames.map((v,i)=>`<option value="${i+1}" ${i+1===im?'selected':''}>${v}</option>`).join('');
+        function updateDays(preferred) {
+          const y=Number(ys.value), m=Number(ms.value), max=jalaali.jalaaliMonthLength(y,m), old=Number(preferred||ds.value||id);
+          ds.innerHTML=Array.from({length:max},(_,i)=>i+1).map(v=>`<option value="${v}" ${v===Math.min(old,max)?'selected':''}>${String(v).padStart(2,'0')}</option>`).join('');
+          updateHidden();
+        }
+        function updateHidden(){document.getElementById(hiddenInputId).value=`${ys.value}-${String(ms.value).padStart(2,'0')}-${String(ds.value).padStart(2,'0')}`;}
+        ys.addEventListener('change',()=>updateDays()); ms.addEventListener('change',()=>updateDays()); ds.addEventListener('change',updateHidden);
+        updateDays(id);
+      }
+
       window.openExportRangeModal = () => {
         const modal = document.getElementById("export-range-modal");
         const startInput = document.getElementById("export-start-date");
         const endInput = document.getElementById("export-end-date");
         const dates = [...savedDatesList].sort();
 
-        if (dates.length) {
-          startInput.value = jalaliDateToGregorianInput(dates[0]);
-          endInput.value = jalaliDateToGregorianInput(dates[dates.length - 1]);
-        } else {
-          const todayInput = `${todayG.getFullYear()}-${String(todayG.getMonth() + 1).padStart(2, "0")}-${String(todayG.getDate()).padStart(2, "0")}`;
-          startInput.value = todayInput;
-          endInput.value = todayInput;
-        }
-
+        const todayStr = `${todayJ.jy}-${String(todayJ.jm).padStart(2,'0')}-${String(todayJ.jd).padStart(2,'0')}`;
+        const startJ = dates.length ? dates[0] : todayStr;
+        const endJ = dates.length ? dates[dates.length - 1] : todayStr;
+        buildJalaliDateSelector('export-start-jalali','export-start-date',startJ);
+        buildJalaliDateSelector('export-end-jalali','export-end-date',endJ);
         modal.style.display = "flex";
       };
 
@@ -2502,8 +2518,8 @@
           return;
         }
 
-        const startDate = gregorianInputToJalali(startInput);
-        const endDate = gregorianInputToJalali(endInput);
+        const startDate = startInput;
+        const endDate = endInput;
 
         if (startDate > endDate) {
           alert("❌ تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.");
@@ -2850,8 +2866,7 @@
   <div id="exercise-progress-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:3000;align-items:center;justify-content:center;padding:14px;box-sizing:border-box">
   <div class="card" style="width:100%;max-width:650px;max-height:90vh;overflow:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 id="exercise-progress-title">پیشرفت حرکت</h2><button onclick="window.closeExerciseProgress()" style="background:#444;color:white;border:0;border-radius:8px;padding:8px 12px">✕</button></div>
-    <p style="font-size:12px;color:#aaa">وزن هر ست و تعداد تکرار در طول جلسات؛ برای مقایسه بهتر، حجم تمرین (وزن × تکرار) نیز نمایش داده می‌شود.</p>
-    <div class="progress-legend"><span><i class="legend-dot" style="background:#ff9800"></i>وزن (kg)</span><span><i class="legend-dot" style="background:#42a5f5"></i>تکرار</span><span><i class="legend-dot" style="background:#66bb6a"></i>حجم (kg × تکرار)</span></div>
+    <div class="progress-legend"><span><i class="legend-dot" style="background:#ff9800"></i>Weight (kg)</span><span><i class="legend-dot" style="background:#42a5f5"></i>Reps</span><span><i class="legend-dot" style="background:#66bb6a"></i>Volume</span></div>
     <div class="chart-container"><canvas id="exerciseProgressChart"></canvas></div>
     <p id="exercise-progress-empty" style="display:none;color:#aaa;text-align:center">برای این حرکت هنوز داده‌ی ثبت‌شده‌ای وجود ندارد.</p>
   </div>
@@ -2872,14 +2887,14 @@ window.openExerciseProgress = (exId, exName) => {
   const labels=rows.map(x=>x.date+' · ست '+x.set);
   window.exerciseProgressChart=new Chart(document.getElementById('exerciseProgressChart').getContext('2d'),{
     type:'line',data:{labels,datasets:[
-      {label:'وزن (kg)',data:rows.map(x=>x.w),borderColor:'#ff9800',yAxisID:'y',tension:.2},
-      {label:'تکرار',data:rows.map(x=>x.r),borderColor:'#42a5f5',yAxisID:'y1',tension:.2},
-      {label:'حجم (kg × تکرار)',data:rows.map(x=>x.v),borderColor:'#66bb6a',yAxisID:'y2',tension:.2}
+      {label:'Weight (kg)',data:rows.map(x=>x.w),borderColor:'#ff9800',yAxisID:'y',tension:.2,pointRadius:0,pointHoverRadius:4},
+      {label:'Reps',data:rows.map(x=>x.r),borderColor:'#42a5f5',yAxisID:'y1',tension:.2,pointRadius:0,pointHoverRadius:4},
+      {label:'Volume',data:rows.map(x=>x.v),borderColor:'#66bb6a',yAxisID:'y2',tension:.2,pointRadius:0,pointHoverRadius:4}
     ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#eee'}}},scales:{
       x:{ticks:{color:'#aaa',maxRotation:60,minRotation:35},grid:{display:false}},
-      y:{type:'linear',position:'left',title:{display:true,text:'وزن (kg)',color:'#ff9800'},ticks:{color:'#ff9800'},grid:{color:'#333'}},
-      y1:{type:'linear',position:'right',title:{display:true,text:'تکرار',color:'#42a5f5'},ticks:{color:'#42a5f5'},grid:{drawOnChartArea:false}},
-      y2:{type:'linear',display:false,position:'right',title:{display:true,text:'حجم',color:'#66bb6a'}}
+      y:{type:'linear',position:'left',title:{display:true,text:'Weight (kg)',color:'#ff9800'},ticks:{color:'#ff9800'},grid:{color:'#333'}},
+      y1:{type:'linear',position:'right',title:{display:true,text:'Reps',color:'#42a5f5'},ticks:{color:'#42a5f5'},grid:{drawOnChartArea:false}},
+      y2:{type:'linear',display:false,position:'right',title:{display:true,text:'Volume',color:'#66bb6a'}}
     }}
   });
 };
