@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#121212" />
+    <link rel="manifest" href="./manifest.webmanifest" />
     <title>My Workout Tracker</title>
     <link
       rel="icon"
@@ -346,6 +348,14 @@
         margin-top: 20px;
       }
 
+      .weight-chart-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0;direction:rtl}
+      .weight-chart-nav button,.progress-btn{border:1px solid #555;background:#303030;color:#ffb74d;border-radius:8px;padding:6px 13px;cursor:pointer;font-size:18px}
+      .progress-btn{font-size:12px;padding:6px 10px;margin-top:8px}
+      .previous-set{display:block;color:#ffb74d;font-size:10px;line-height:1.4;margin-top:2px;min-height:14px}
+      .set-input-wrap{display:flex;flex-direction:column;min-width:0}
+      .progress-legend{display:flex;gap:12px;flex-wrap:wrap;color:#ccc;font-size:12px}
+      .legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:4px}
+      @media(max-width:420px){.set-row{grid-template-columns: .8fr 1.4fr 1.4fr;gap:5px}.set-row input{width:100%;box-sizing:border-box;padding:7px 2px}}
       /* Floating Action Button (FAB) */
       .fab-container {
         position: fixed;
@@ -818,6 +828,11 @@
 
       <div class="card">
         <h2>📈 Body Weight</h2>
+        <div class="weight-chart-nav">
+          <button type="button" onclick="shiftWeightChart(-1)" aria-label="سه ماه قبل">‹</button>
+          <strong id="weight-chart-period">پاییز</strong>
+          <button type="button" onclick="shiftWeightChart(1)" aria-label="سه ماه بعد">›</button>
+        </div>
         <div class="chart-container">
           <canvas id="weightChart"></canvas>
         </div>
@@ -1969,6 +1984,9 @@
       let globalPrs = {};
       let savedDatesList = [];
       let weightChartInstance = null;
+      let weightChartSeasonOffset = 0;
+      window.workoutLogHistory = {};
+      window.exerciseProgressChart = null;
       window.currentActiveExId = null;
 
       window.onload = async () => {
@@ -2037,10 +2055,12 @@
           const logsSnapshot = await getDocs(collection(db, "daily_logs"));
           savedDatesList = [];
           window.weightHistory = [];
+          window.workoutLogHistory = {};
 
           logsSnapshot.forEach((doc) => {
             savedDatesList.push(doc.id);
             const data = doc.data();
+            window.workoutLogHistory[doc.id] = data;
             if (data.bodyWeight) {
               window.weightHistory.push({
                 date: doc.id,
@@ -2236,15 +2256,19 @@
             prText = `🏆 PR: ${m}m ${s}s`;
           }
 
+          const priorDate = savedDatesList.filter(d => d < selectedDateStr && window.workoutLogHistory[d]?.exercises?.[ex.id]).sort().pop();
+          const priorSets = priorDate ? (window.workoutLogHistory[priorDate].exercises[ex.id] || []) : [];
           for (let s = 1; s <= ex.sets; s++) {
+            const prior = priorSets[s-1];
+            const priorLabel = ex.type === "time" ? (prior ? `${prior.min||0}m ${prior.sec||0}s` : "—") : ex.type === "rep-only" ? (prior ? `${prior.r||"—"} reps` : "—") : (prior ? `${prior.w||"—"} kg × ${prior.r||"—"} reps` : "—");
             if (ex.type === "time") {
               const savedMin = savedSets[s - 1]?.min || "";
               const savedSec = savedSets[s - 1]?.sec || "";
               setInputsHtml += `
                                   <div class="set-row">
                                       <span>Set ${s}</span>
-                                      <input type="number" id="min-${ex.id}-${s}" placeholder="min" value="${savedMin}">
-                                      <input type="number" id="sec-${ex.id}-${s}" placeholder="sec" value="${savedSec}">
+                                      <div class="set-input-wrap"><input type="number" id="min-${ex.id}-${s}" placeholder="min" value="${savedMin}"><small class="previous-set">قبل: ${priorLabel}</small></div>
+                                      <div class="set-input-wrap"><input type="number" id="sec-${ex.id}-${s}" placeholder="sec" value="${savedSec}"></div>
                                   </div>
                               `;
             } else if (ex.type === "rep-only") {
@@ -2253,7 +2277,7 @@
                                   <div class="set-row">
                                       <span>Set ${s}</span>
                                       <div style="text-align:center; color:#666; font-size:12px;">Bodyweight</div>
-                                      <input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}">
+                                      <div class="set-input-wrap"><input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}"><small class="previous-set">قبل: ${priorLabel}</small></div>
                                   </div>
                               `;
             } else {
@@ -2262,8 +2286,8 @@
               setInputsHtml += `
                                   <div class="set-row">
                                       <span>Set ${s}</span>
-                                      <input type="number" id="w-${ex.id}-${s}" placeholder="kg" value="${savedW}">
-                                      <input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}">
+                                      <div class="set-input-wrap"><input type="number" id="w-${ex.id}-${s}" placeholder="kg" value="${savedW}"><small class="previous-set">قبل: ${prior ? `${prior.w||"—"} kg` : "—"}</small></div>
+                                      <div class="set-input-wrap"><input type="number" id="r-${ex.id}-${s}" placeholder="reps" value="${savedR}"><small class="previous-set">قبل: ${prior ? `${prior.r||"—"} reps` : "—"}</small></div>
                                   </div>
                               `;
             }
@@ -2281,6 +2305,7 @@
                               </div>
                               ${setInputsHtml}
                               <div class="ex-note">💡 Focus: ${ex.note}</div>
+                              <button type="button" class="progress-btn" onclick="event.stopPropagation(); window.openExerciseProgress('${ex.id}','${ex.name.replace(/'/g, "\\'")}')">📈 نمودار پیشرفت حرکت</button>
                           </div>
                       `;
 
@@ -2361,7 +2386,11 @@
 
         exercises.forEach((ex) => {
           logData.exercises[ex.id] = [];
+          const priorDate = savedDatesList.filter(d => d < selectedDateStr && window.workoutLogHistory[d]?.exercises?.[ex.id]).sort().pop();
+          const priorSets = priorDate ? (window.workoutLogHistory[priorDate].exercises[ex.id] || []) : [];
           for (let s = 1; s <= ex.sets; s++) {
+            const prior = priorSets[s-1];
+            const priorLabel = ex.type === "time" ? (prior ? `${prior.min||0}m ${prior.sec||0}s` : "—") : ex.type === "rep-only" ? (prior ? `${prior.r||"—"} reps` : "—") : (prior ? `${prior.w||"—"} kg × ${prior.r||"—"} reps` : "—");
             if (ex.type === "time") {
               const min = document.getElementById(`min-${ex.id}-${s}`).value;
               const sec = document.getElementById(`sec-${ex.id}-${s}`).value;
@@ -2392,69 +2421,40 @@
         showLoading(false);
       };
 
+      function shiftWeightChart(direction) {
+        weightChartSeasonOffset += direction;
+        renderChart();
+      }
+      window.shiftWeightChart = shiftWeightChart;
+
       function renderChart() {
-        const labels = [];
-        const dataPoints = [];
-        const targetYear = todayJ.jy;
-
-        for (let m = 4; m <= 6; m++) {
-          for (let d = 1; d <= 31; d++) {
-            const dateStr = `${targetYear}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-            if (d === 1 || d === 15 || (d === 31 && m === 6)) {
-              labels.push(
-                `${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`,
-              );
-            } else {
-              labels.push("");
-            }
-            const entry = window.weightHistory.find(
-              (item) => item.date === dateStr,
-            );
-            dataPoints.push(entry ? entry.weight : null);
+        const nowJ = jalaali.toJalaali(new Date().getFullYear(), new Date().getMonth()+1, new Date().getDate());
+        let startMonth = 7 + (weightChartSeasonOffset * 3);
+        let year = nowJ.jy;
+        while (startMonth > 12) { startMonth -= 12; year++; }
+        while (startMonth < 1) { startMonth += 12; year--; }
+        const months = [startMonth, ((startMonth)%12)+1, ((startMonth+1)%12)+1];
+        const years = months.map((m,i)=> (i===0 ? year : (m < months[i-1] ? year+1 : (i===2 && months[1] < months[0] ? year+1 : year))));
+        // Derive each month/year safely across year boundaries.
+        const monthDates = [];
+        let y=year,m=startMonth;
+        for(let i=0;i<3;i++){ monthDates.push({y,m}); m++; if(m>12){m=1;y++;} }
+        const seasonNames = {1:"زمستان",4:"بهار",7:"پاییز",10:"زمستان"};
+        document.getElementById("weight-chart-period").textContent =
+          `${seasonNames[startMonth] || monthNames[startMonth-1]} ${year} · ${monthNames[monthDates[2].m-1]}`;
+        const labels=[], dataPoints=[];
+        monthDates.forEach(({y,m})=>{
+          const days = jalaali.jalaaliMonthLength(y,m);
+          for(let d=1;d<=days;d++){
+            labels.push((d===1||d===15||d===days)?`${d} ${monthNames[m-1].slice(0,3)}`:"");
+            const dateStr=`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+            const entry=(window.weightHistory||[]).find(item=>item.date===dateStr);
+            dataPoints.push(entry?entry.weight:null);
           }
-        }
-
-        const ctx = document.getElementById("weightChart").getContext("2d");
-        if (weightChartInstance) weightChartInstance.destroy();
-
-        weightChartInstance = new Chart(ctx, {
-          type: "line",
-          data: {
-            labels: labels,
-            datasets: [
-              {
-                label: "Body Weight (kg)",
-                data: dataPoints,
-                borderColor: "#ff9800",
-                backgroundColor: "rgba(255, 152, 0, 0.2)",
-                borderWidth: 2,
-                pointBackgroundColor: "#fff",
-                pointBorderColor: "#ff9800",
-                pointRadius: 3,
-                spanGaps: true,
-                tension: 0.2,
-                fill: true,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: "#e0e0e0" } } },
-            scales: {
-              x: {
-                ticks: { color: "#aaa", maxRotation: 0, autoSkip: false },
-                grid: { color: "#333", display: false },
-              },
-              y: {
-                min: 68,
-                max: 80,
-                ticks: { color: "#aaa" },
-                grid: { color: "#333" },
-              },
-            },
-          },
         });
+        const ctx=document.getElementById("weightChart").getContext("2d");
+        if(weightChartInstance) weightChartInstance.destroy();
+        weightChartInstance=new Chart(ctx,{type:"line",data:{labels,datasets:[{label:"Body Weight (kg)",data:dataPoints,borderColor:"#ff9800",backgroundColor:"rgba(255,152,0,.2)",borderWidth:2,pointBackgroundColor:"#fff",pointBorderColor:"#ff9800",pointRadius:3,spanGaps:true,tension:.2,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#e0e0e0"}}},scales:{x:{ticks:{color:"#aaa",maxRotation:0,autoSkip:false},grid:{color:"#333",display:false}},y:{ticks:{color:"#aaa"},grid:{color:"#333"}}}}});
       }
 
       function jalaliDateToGregorianInput(dateStr) {
@@ -2698,7 +2698,11 @@
           context += `- حرکت ${ex.name}: `;
           let completedSets = [];
 
+          const priorDate = savedDatesList.filter(d => d < selectedDateStr && window.workoutLogHistory[d]?.exercises?.[ex.id]).sort().pop();
+          const priorSets = priorDate ? (window.workoutLogHistory[priorDate].exercises[ex.id] || []) : [];
           for (let s = 1; s <= ex.sets; s++) {
+            const prior = priorSets[s-1];
+            const priorLabel = ex.type === "time" ? (prior ? `${prior.min||0}m ${prior.sec||0}s` : "—") : ex.type === "rep-only" ? (prior ? `${prior.r||"—"} reps` : "—") : (prior ? `${prior.w||"—"} kg × ${prior.r||"—"} reps` : "—");
             if (ex.type === "time") {
               const mEl = document.getElementById(`min-${ex.id}-${s}`);
               const sEl = document.getElementById(`sec-${ex.id}-${s}`);
@@ -2843,5 +2847,42 @@
         });
       }
     </script>
-  </body>
+  <div id="exercise-progress-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:3000;align-items:center;justify-content:center;padding:14px;box-sizing:border-box">
+  <div class="card" style="width:100%;max-width:650px;max-height:90vh;overflow:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 id="exercise-progress-title">پیشرفت حرکت</h2><button onclick="window.closeExerciseProgress()" style="background:#444;color:white;border:0;border-radius:8px;padding:8px 12px">✕</button></div>
+    <p style="font-size:12px;color:#aaa">وزن هر ست و تعداد تکرار در طول جلسات؛ برای مقایسه بهتر، حجم تمرین (وزن × تکرار) نیز نمایش داده می‌شود.</p>
+    <div class="progress-legend"><span><i class="legend-dot" style="background:#ff9800"></i>وزن (kg)</span><span><i class="legend-dot" style="background:#42a5f5"></i>تکرار</span><span><i class="legend-dot" style="background:#66bb6a"></i>حجم (kg × تکرار)</span></div>
+    <div class="chart-container"><canvas id="exerciseProgressChart"></canvas></div>
+    <p id="exercise-progress-empty" style="display:none;color:#aaa;text-align:center">برای این حرکت هنوز داده‌ی ثبت‌شده‌ای وجود ندارد.</p>
+  </div>
+</div>
+<script>
+window.closeExerciseProgress = () => { document.getElementById('exercise-progress-modal').style.display='none'; if(window.exerciseProgressChart){window.exerciseProgressChart.destroy();window.exerciseProgressChart=null;} };
+window.openExerciseProgress = (exId, exName) => {
+  const rows=[];
+  Object.keys(window.workoutLogHistory||{}).sort().forEach(date=>{
+    const sets=window.workoutLogHistory[date]?.exercises?.[exId]||[];
+    sets.forEach((set,i)=>{const w=parseFloat(set.w),r=parseFloat(set.r);if(Number.isFinite(w)&&Number.isFinite(r)&&w>=0&&r>0)rows.push({date:date.slice(5),set:i+1,w,r,v:w*r});});
+  });
+  document.getElementById('exercise-progress-title').textContent='📈 '+exName;
+  document.getElementById('exercise-progress-modal').style.display='flex';
+  document.getElementById('exercise-progress-empty').style.display=rows.length?'none':'block';
+  if(window.exerciseProgressChart){window.exerciseProgressChart.destroy();window.exerciseProgressChart=null;}
+  if(!rows.length)return;
+  const labels=rows.map(x=>x.date+' · ست '+x.set);
+  window.exerciseProgressChart=new Chart(document.getElementById('exerciseProgressChart').getContext('2d'),{
+    type:'line',data:{labels,datasets:[
+      {label:'وزن (kg)',data:rows.map(x=>x.w),borderColor:'#ff9800',yAxisID:'y',tension:.2},
+      {label:'تکرار',data:rows.map(x=>x.r),borderColor:'#42a5f5',yAxisID:'y1',tension:.2},
+      {label:'حجم (kg × تکرار)',data:rows.map(x=>x.v),borderColor:'#66bb6a',yAxisID:'y2',tension:.2}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#eee'}}},scales:{
+      x:{ticks:{color:'#aaa',maxRotation:60,minRotation:35},grid:{display:false}},
+      y:{type:'linear',position:'left',title:{display:true,text:'وزن (kg)',color:'#ff9800'},ticks:{color:'#ff9800'},grid:{color:'#333'}},
+      y1:{type:'linear',position:'right',title:{display:true,text:'تکرار',color:'#42a5f5'},ticks:{color:'#42a5f5'},grid:{drawOnChartArea:false}},
+      y2:{type:'linear',display:false,position:'right',title:{display:true,text:'حجم',color:'#66bb6a'}}
+    }}
+  });
+};
+</script>
+</body>
 </html>
