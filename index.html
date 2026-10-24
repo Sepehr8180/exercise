@@ -1241,6 +1241,11 @@
       >
         Start
       </button>
+      <button
+        id="timer-reset-btn"
+        onclick="window.resetTimer()"
+        style="background:#424242;color:#fff;border:1px solid #666;padding:8px 14px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;margin-top:8px;font-size:14px"
+      >↺ Reset timer</button>
     </div>
 
     <div
@@ -2615,6 +2620,68 @@
       let timerInterval;
       let remainingSeconds = 0;
       let isTimerRunning = false;
+      let timerEndAt = 0;
+      const TIMER_STATE_KEY = "workout_rest_timer_v2";
+      let timerDefaultSeconds = 90;
+
+      const persistTimerState = () => {
+        try {
+          localStorage.setItem(TIMER_STATE_KEY, JSON.stringify({
+            remainingSeconds,
+            isTimerRunning,
+            timerEndAt,
+            timerDefaultSeconds
+          }));
+        } catch (_) {}
+      };
+
+      const loadTimerState = () => {
+        try {
+          const saved = JSON.parse(localStorage.getItem(TIMER_STATE_KEY) || "null");
+          if (!saved) return;
+          timerDefaultSeconds = Math.max(0, Number(saved.timerDefaultSeconds) || 90);
+          if (saved.isTimerRunning && Number(saved.timerEndAt) > 0) {
+            timerEndAt = Number(saved.timerEndAt);
+            remainingSeconds = Math.max(0, Math.ceil((timerEndAt - Date.now()) / 1000));
+            isTimerRunning = remainingSeconds > 0;
+          } else {
+            remainingSeconds = Math.max(0, Number(saved.remainingSeconds) || 0);
+            isTimerRunning = false;
+          }
+        } catch (_) {}
+      };
+
+      const finishTimer = (showAlert = true) => {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        const wasRunning = isTimerRunning;
+        isTimerRunning = false;
+        timerEndAt = 0;
+        remainingSeconds = 0;
+        const startBtn = document.getElementById("timer-start-btn");
+        if (startBtn) {
+          startBtn.style.background = "#2e7d32";
+          startBtn.innerText = "Start";
+        }
+        persistTimerState();
+        window.updateTimerDisplay();
+        if (showAlert && wasRunning && document.visibilityState === "visible") {
+          alert("⏱️ استراحت تمام شد!");
+        }
+      };
+
+      const tickTimer = () => {
+        if (!isTimerRunning) {
+          window.updateTimerDisplay();
+          return;
+        }
+        remainingSeconds = Math.max(0, Math.ceil((timerEndAt - Date.now()) / 1000));
+        if (remainingSeconds <= 0) {
+          finishTimer(true);
+          return;
+        }
+        window.updateTimerDisplay();
+      };
 
       window.toggleFabMenu = () => {
         const menu = document.getElementById("fab-menu");
@@ -2625,130 +2692,149 @@
         document.getElementById("fab-menu").style.display = "none";
         document.getElementById("timer-widget").style.display = "block";
 
-        if (!isTimerRunning) {
-          remainingSeconds = 60;
+        if (!isTimerRunning && remainingSeconds <= 0) {
+          timerDefaultSeconds = 60;
           if (window.currentActiveExId) {
             const activeData = getActiveWorkoutData(selectedDateStr);
-            const ex = activeData[currentRoutine]?.find(
-              (e) => e.id === window.currentActiveExId,
-            );
-            if (ex) {
-              const largeMuscles = [
-                "m-chest",
-                "m-lats",
-                "m-quads",
-                "m-hamstrings",
-                "m-glutes",
-                "m-lower-back",
-              ];
-              const isCompound = ex.muscles.primary.some((m) =>
-                largeMuscles.includes(m),
-              );
-              if (isCompound) {
-                remainingSeconds = 90;
-              }
-            }
+            const ex = activeData[currentRoutine]?.find((e) => e.id === window.currentActiveExId);
+            const largeMuscles = ["m-chest", "m-lats", "m-quads", "m-hamstrings", "m-glutes", "m-lower-back"];
+            if (ex && ex.muscles?.primary?.some((m) => largeMuscles.includes(m))) timerDefaultSeconds = 90;
           }
-          window.updateTimerDisplay();
+          remainingSeconds = timerDefaultSeconds;
+          persistTimerState();
         }
+        window.updateTimerDisplay();
       };
 
       window.updateTimerDisplay = () => {
         const safeSeconds = Math.max(0, remainingSeconds);
         const m = Math.floor(safeSeconds / 60);
-        const s = safeSeconds % 60;
-        document.getElementById("timer-minutes").innerText = String(m).padStart(
-          2,
-          "0",
-        );
-        document.getElementById("timer-seconds").innerText = String(s).padStart(
-          2,
-          "0",
-        );
-        document.getElementById("timer-display").innerText =
-          `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+        const sec = safeSeconds % 60;
+        const minutesEl = document.getElementById("timer-minutes");
+        const secondsEl = document.getElementById("timer-seconds");
+        const displayEl = document.getElementById("timer-display");
+        if (minutesEl) minutesEl.innerText = String(m).padStart(2, "0");
+        if (secondsEl) secondsEl.innerText = String(sec).padStart(2, "0");
+        if (displayEl) displayEl.innerText = `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+        const startBtn = document.getElementById("timer-start-btn");
+        if (startBtn) {
+          startBtn.style.background = isTimerRunning ? "#f57c00" : "#2e7d32";
+          startBtn.innerText = isTimerRunning ? "Running..." : "Start";
+        }
       };
 
       window.adjustTimer = (unit, amount) => {
         if (isTimerRunning) return;
         const change = unit === "minutes" ? amount * 60 : amount;
         remainingSeconds = Math.max(0, remainingSeconds + change);
+        timerDefaultSeconds = remainingSeconds;
+        persistTimerState();
         window.updateTimerDisplay();
       };
 
       window.startTimer = () => {
         if (isTimerRunning) return;
+        if (remainingSeconds <= 0) remainingSeconds = timerDefaultSeconds || 90;
         isTimerRunning = true;
-
-        const startBtn = document.getElementById("timer-start-btn");
-        startBtn.style.background = "#f57c00";
-        startBtn.innerText = "Running...";
-
+        timerEndAt = Date.now() + remainingSeconds * 1000;
+        persistTimerState();
         clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-          remainingSeconds--;
-          if (remainingSeconds <= 0) {
-            clearInterval(timerInterval);
-            isTimerRunning = false;
-            startBtn.style.background = "#2e7d32";
-            startBtn.innerText = "Start";
-            alert("⏱️ استراحت تمام شد!");
-          }
-          window.updateTimerDisplay();
-        }, 1000);
+        timerInterval = setInterval(tickTimer, 250);
+        tickTimer();
+      };
+
+      window.resetTimer = () => {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        isTimerRunning = false;
+        timerEndAt = 0;
+        remainingSeconds = timerDefaultSeconds || 90;
+        persistTimerState();
+        window.updateTimerDisplay();
       };
 
       window.closeTimer = () => {
         document.getElementById("timer-widget").style.display = "none";
       };
 
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          if (isTimerRunning && timerEndAt <= Date.now()) finishTimer(false);
+          else tickTimer();
+        }
+      });
+      window.addEventListener("pageshow", () => {
+        if (isTimerRunning && timerEndAt <= Date.now()) finishTimer(false);
+        else tickTimer();
+      });
+      window.addEventListener("focus", tickTimer);
+
+      loadTimerState();
+      if (isTimerRunning) {
+        timerInterval = setInterval(tickTimer, 250);
+      }
+      window.updateTimerDisplay();
+
       window.getCurrentWorkoutContext = () => {
         if (!currentRoutine || currentRoutine === "rest") {
           return "کاربر هنوز برنامه‌ای برای امروز انتخاب نکرده یا در روز استراحت است.";
         }
 
-        let context = `وضعیت تمرین امروز کاربر (برنامه ${currentRoutine}):\n`;
-        const activeData = getActiveWorkoutData(selectedDateStr);
+        const activeData = getActiveWorkoutData(selectedDateStr) || {};
         const exercises = activeData[currentRoutine] || [];
+        const priorDate = savedDatesList
+          .filter((date) => date < selectedDateStr)
+          .sort()
+          .reverse()
+          .find((date) => window.workoutLogHistory[date]?.exercises);
+        let context = `وضعیت تمرین انتخاب‌شده برای تاریخ ${selectedDateStr} (برنامه ${currentRoutine}):\n`;
+        context += "برای هر حرکت، تعداد ست کل، ست‌های ثبت‌شده و باقی‌مانده را در نظر بگیر. اگر ست‌هایی باقی مانده‌اند، توصیه‌ها را متناسب با ادامهٔ همان تمرین بده.\n";
 
         exercises.forEach((ex) => {
-          context += `- حرکت ${ex.name}: `;
-          let completedSets = [];
+          const totalSets = Number(ex.sets) || 0;
+          const priorLog = priorDate ? window.workoutLogHistory[priorDate]?.exercises?.[ex.id] : null;
+          const currentSets = [];
+          const previousSets = [];
 
-          const priorDate = savedDatesList.filter(d => d < selectedDateStr && window.workoutLogHistory[d]?.exercises?.[ex.id]).sort().pop();
-          const priorSets = priorDate ? (window.workoutLogHistory[priorDate].exercises[ex.id] || []) : [];
-          for (let s = 1; s <= ex.sets; s++) {
-            const prior = priorSets[s-1];
-            const priorLabel = ex.type === "time" ? (prior ? `${prior.min||0}m ${prior.sec||0}s` : "—") : ex.type === "rep-only" ? (prior ? `${prior.r||"—"} reps` : "—") : (prior ? `${prior.w||"—"} kg × ${prior.r||"—"} reps` : "—");
+          for (let setNo = 1; setNo <= totalSets; setNo++) {
+            const prior = priorLog?.[setNo - 1];
+            let priorLabel = "داده‌ای ثبت نشده";
+            if (prior) {
+              if (ex.type === "time") priorLabel = `${prior.min || 0} دقیقه و ${prior.sec || 0} ثانیه`;
+              else if (ex.type === "rep-only") priorLabel = `${prior.r ?? "—"} تکرار`;
+              else priorLabel = `${prior.w ?? "—"} کیلوگرم × ${prior.r ?? "—"} تکرار`;
+            }
+            previousSets.push(`ست ${setNo}: ${priorLabel}`);
+
+            let currentLabel = "";
             if (ex.type === "time") {
-              const mEl = document.getElementById(`min-${ex.id}-${s}`);
-              const sEl = document.getElementById(`sec-${ex.id}-${s}`);
-              if (mEl && sEl && (mEl.value || sEl.value)) {
-                completedSets.push(
-                  `ست ${s} (${mEl.value || 0}m ${sEl.value || 0}s)`,
-                );
+              const minEl = document.getElementById(`min-${ex.id}-${setNo}`);
+              const secEl = document.getElementById(`sec-${ex.id}-${setNo}`);
+              if ((minEl?.value || "") !== "" || (secEl?.value || "") !== "") {
+                currentLabel = `${minEl?.value || 0} دقیقه و ${secEl?.value || 0} ثانیه`;
               }
             } else if (ex.type === "rep-only") {
-              const rEl = document.getElementById(`r-${ex.id}-${s}`);
-              if (rEl && rEl.value) {
-                completedSets.push(`ست ${s} (${rEl.value} تکرار)`);
-              }
+              const repsEl = document.getElementById(`r-${ex.id}-${setNo}`);
+              if ((repsEl?.value || "") !== "") currentLabel = `${repsEl.value} تکرار`;
             } else {
-              const wEl = document.getElementById(`w-${ex.id}-${s}`);
-              const rEl = document.getElementById(`r-${ex.id}-${s}`);
-              if (wEl && rEl && (wEl.value || rEl.value)) {
-                completedSets.push(
-                  `ست ${s} (وزنه ${wEl.value || 0}kg، ${rEl.value || 0} تکرار)`,
-                );
+              const weightEl = document.getElementById(`w-${ex.id}-${setNo}`);
+              const repsEl = document.getElementById(`r-${ex.id}-${setNo}`);
+              const weight = weightEl?.value || "";
+              const reps = repsEl?.value || "";
+              if (weight !== "" || reps !== "") {
+                currentLabel = `${weight !== "" ? weight + " کیلوگرم" : "وزن وارد نشده"} × ${reps !== "" ? reps + " تکرار" : "تکرار وارد نشده"}`;
               }
             }
+            if (currentLabel) currentSets.push(`ست ${setNo}: ${currentLabel}`);
           }
 
-          if (completedSets.length > 0) {
-            context += completedSets.join(" | ") + "\n";
-          } else {
-            context += "هنوز انجام نشده\n";
-          }
+          const completedCount = currentSets.length;
+          const remainingCount = Math.max(0, totalSets - completedCount);
+          context += `\nحرکت: ${ex.name}\n`;
+          context += `تعداد کل ست‌ها: ${totalSets}\nست‌های واردشده در جلسهٔ فعلی: ${completedCount}\nست‌های باقی‌مانده: ${remainingCount}\n`;
+          context += `هدف برنامه: ${ex.target || "مشخص نشده"}\n`;
+          context += `اطلاعات جلسهٔ قبلی (${priorDate || "جلسهٔ قبلی پیدا نشد"}): ${previousSets.join(" | ") || "داده‌ای ثبت نشده"}\n`;
+          context += `اطلاعات واردشده برای جلسهٔ فعلی: ${currentSets.join(" | ") || "هنوز ستّی وارد نشده"}\n`;
         });
 
         return context;
