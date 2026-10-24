@@ -408,6 +408,7 @@
     </style>
   </head>
   <body>
+    <div id="sync-status" role="status" aria-live="polite" style="position:sticky;top:0;z-index:1000;text-align:center;background:#202020;border:1px solid #444;border-radius:8px;padding:6px 10px;margin:0 auto 8px;max-width:600px;font-size:12px">در حال آماده‌سازی ذخیره‌سازی محلی…</div>
     <div class="container">
       <div id="loading">⏳ Syncing...</div>
       <h3>🗓️ Training Calendar</h3>
@@ -1077,6 +1078,8 @@
             display: none;
           "
         ></video>
+        <p id="info-modal-video-status" style="display:none;color:#ffcc80;font-size:12px;text-align:center;margin:4px 0 10px"></p>
+        <a id="info-modal-video-link" target="_blank" rel="noopener noreferrer" style="display:none;color:#ffb74d;text-align:center;font-size:12px;margin-bottom:10px" href="#">بازکردن مستقیم ویدیو</a>
         <p
           id="info-modal-desc"
           style="
@@ -1095,6 +1098,8 @@
             document.getElementById('exercise-info-modal').style.display =
               'none';
             document.getElementById('info-modal-video').pause();
+            document.getElementById('info-modal-video').removeAttribute('src');
+            document.getElementById('info-modal-video').load();
           "
           style="
             background: #555;
@@ -1327,6 +1332,135 @@
 
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
+
+      const LOCAL_DB_NAME = "workout-tracker-offline-v1";
+      let localDbPromise, syncInProgress = false, lastSyncError = false;
+      function openLocalDb() {
+        if (localDbPromise) return localDbPromise;
+        localDbPromise = new Promise((resolve, reject) => {
+          const request = indexedDB.open(LOCAL_DB_NAME, 1);
+          request.onupgradeneeded = () => {
+            const database = request.result;
+            if (!database.objectStoreNames.contains("logs")) database.createObjectStore("logs", { keyPath: "id" });
+            if (!database.objectStoreNames.contains("pending")) database.createObjectStore("pending", { keyPath: "key" });
+            if (!database.objectStoreNames.contains("meta")) database.createObjectStore("meta", { keyPath: "key" });
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error || new Error("IndexedDB unavailable"));
+        });
+        return localDbPromise;
+      }
+      async function localRequest(name, mode, action) {
+        const database = await openLocalDb();
+        return new Promise((resolve, reject) => {
+          let tx;
+          try { tx = database.transaction(name, mode); }
+          catch (error) { reject(error); return; }
+          let request = null;
+          let result;
+          try {
+            request = action(tx.objectStore(name));
+            if (request) {
+              request.onsuccess = () => { result = request.result; };
+              request.onerror = () => reject(request.error || new Error("IndexedDB request failed"));
+            }
+          } catch (error) {
+            try { tx.abort(); } catch (_) {}
+            reject(error);
+            return;
+          }
+          // Resolve writes only after IndexedDB commits the transaction, not merely
+          // when the individual request reports success.
+          tx.oncomplete = () => resolve(request ? result : true);
+          tx.onerror = () => reject(tx.error || new Error("IndexedDB transaction failed"));
+          tx.onabort = () => reject(tx.error || new Error("IndexedDB transaction aborted"));
+        });
+      }
+      const getAllLocalLogs = () => localRequest("logs", "readonly", s => s.getAll());
+      const putLocalLog = v => localRequest("logs", "readwrite", s => s.put(v));
+      const deleteLocalLog = id => localRequest("logs", "readwrite", s => s.delete(id));
+      const getPendingMutations = () => localRequest("pending", "readonly", s => s.getAll());
+      const putPendingMutation = v => localRequest("pending", "readwrite", s => s.put(v));
+      const deletePendingMutation = key => localRequest("pending", "readwrite", s => s.delete(key));
+      const getLocalMeta = key => localRequest("meta", "readonly", s => s.get(key));
+      const putLocalMeta = (key, value) => localRequest("meta", "readwrite", s => s.put({key, value}));
+
+      function stableStringify(value) {
+        if (Array.isArray(value)) return "[" + value.map(stableStringify).join(",") + "]";
+        if (value && typeof value === "object") return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + stableStringify(value[key])).join(",") + "}";
+        return JSON.stringify(value);
+      }
+      async function queueRemoteMutation(collectionName, id, operation, data = null, baseData = null, checkConflict = false) {
+        const key = collectionName + "/" + id;
+        await putPendingMutation({key, collection: collectionName, id, operation, data, baseData, checkConflict,
+          mutationId: Date.now().toString(36) + "-" + Math.random().toString(36).slice(2), createdAt: Date.now()});
+        updateSyncStatus();
+      }
+      async function saveLogLocally(id, data) {
+        const key = "daily_logs/" + id;
+        const existing = (await getPendingMutations()).find(item => item.key === key);
+        const base = existing ? existing.baseData : (window.workoutLogHistory[id] ? JSON.parse(JSON.stringify(window.workoutLogHistory[id])) : null);
+        await putLocalLog({...data, id});
+        await queueRemoteMutation("daily_logs", id, "set", data, base, true);
+      }
+      async function clearLogLocally(id) {
+        const key = "daily_logs/" + id;
+        const existing = (await getPendingMutations()).find(item => item.key === key);
+        const base = existing ? existing.baseData : (window.workoutLogHistory[id] ? JSON.parse(JSON.stringify(window.workoutLogHistory[id])) : null);
+        await deleteLocalLog(id);
+        await queueRemoteMutation("daily_logs", id, "delete", null, base, true);
+      }
+      async function updateSyncStatus() {
+        const el = document.getElementById("sync-status");
+        if (!el) return;
+        let pending = [];
+        try { pending = await getPendingMutations(); } catch (_) {}
+        const count = pending.length;
+        const conflicts = pending.filter(item => item.conflict).length;
+        if (conflicts) { el.textContent = "تعارض اطلاعات در " + conflicts + " مورد؛ تغییرات گوشی محفوظ است و نیاز به بررسی دارد"; el.style.color = "#ff8a80"; }
+        else if (!navigator.onLine) { el.textContent = count ? "آفلاین · " + count + " تغییر ذخیره‌شده روی گوشی" : "آفلاین · اطلاعات ذخیره‌شده روی گوشی"; el.style.color = "#ffca80"; }
+        else if (syncInProgress) { el.textContent = "در حال همگام‌سازی با سرور…"; el.style.color = "#80cbc4"; }
+        else if (count) { el.textContent = count + " تغییر منتظر ارسال به سرور"; el.style.color = "#ffca80"; }
+        else if (lastSyncError) { el.textContent = "اتصال برقرار است، اما همگام‌سازی ناموفق بود"; el.style.color = "#ff8a80"; }
+        else { el.textContent = "همهٔ اطلاعات همگام‌سازی شده‌اند"; el.style.color = "#81c784"; }
+      }
+      async function syncPendingChanges() {
+        if (!navigator.onLine || syncInProgress) return;
+        syncInProgress = true; lastSyncError = false; await updateSyncStatus();
+        try {
+          const items = (await getPendingMutations()).sort((a,b)=>a.createdAt-b.createdAt);
+          for (const item of items) {
+            if (!navigator.onLine) break;
+            try {
+              if (item.conflict) { lastSyncError = true; continue; }
+              const ref = doc(db, item.collection, item.id);
+              if (item.collection === "daily_logs" && item.checkConflict && !item.forceOverwrite) {
+                const remoteSnap = await getDoc(ref);
+                const remoteData = remoteSnap.exists() ? remoteSnap.data() : null;
+                if (stableStringify(remoteData) !== stableStringify(item.baseData)) {
+                  const overwrite = confirm("این روز از زمان آخرین دریافت روی سرور هم تغییر کرده است.\n\n«تأیید» = نسخهٔ ذخیره‌شده روی گوشی جایگزین سرور شود.\n«لغو» = تغییرات گوشی حفظ شود و فعلاً ارسال نشود.");
+                  if (!overwrite) {
+                    await putPendingMutation({...item, conflict: true});
+                    lastSyncError = true;
+                    continue;
+                  }
+                  item.forceOverwrite = true;
+                  await putPendingMutation(item);
+                }
+              }
+              if (item.operation === "delete") await deleteDoc(ref); else await setDoc(ref, item.data);
+              const latest = (await getPendingMutations()).find(x=>x.key===item.key);
+              if (latest && latest.mutationId===item.mutationId) await deletePendingMutation(item.key);
+            } catch (e) { lastSyncError = true; console.warn("Offline change will retry:",item.key,e); break; }
+          }
+        } catch (e) { lastSyncError = true; console.warn("Could not read pending changes",e); }
+        finally { syncInProgress = false; await updateSyncStatus(); if (navigator.onLine && !lastSyncError && (await getPendingMutations()).length) Promise.resolve().then(() => syncPendingChanges()); }
+      }
+      window.addEventListener("online", async () => {
+        await syncPendingChanges(); await fetchAllData(); renderCalendar(); renderChart();
+        const [y,m,d] = selectedDateStr.split("-").map(Number); await selectDate(y,m,d); await updateSyncStatus();
+      });
+      window.addEventListener("offline", updateSyncStatus);
 
       // ۱. مخزن تمام برنامه‌های ورزشی شما
       // به تمام حرکات، ویژگی‌های اختصاصی infoDesc (نکته فارسی متفاوت) و infoVideo (لینک ویدیو) اضافه شد.
@@ -1970,11 +2104,31 @@
 
       window.onload = async () => {
         showLoading(true);
-        await fetchAllData();
-        renderCalendar();
-        await selectDate(todayJ.jy, todayJ.jm, todayJ.jd);
-        renderChart();
-        showLoading(false);
+        try {
+          await openLocalDb();
+          if (navigator.storage && navigator.storage.persist) {
+            try { await navigator.storage.persist(); } catch (_) {}
+          }
+          const existingLogs = await getAllLocalLogs();
+          const hydrated = await getLocalMeta("cloudHydratedAt");
+          const status = document.getElementById("sync-status");
+          if (navigator.onLine && (!hydrated || !existingLogs.length)) {
+            status.textContent = "در حال دریافت تمام سوابق تمرین از سرور و ذخیره روی گوشی…";
+            status.style.color = "#80cbc4";
+          }
+          await updateSyncStatus(); await syncPendingChanges();
+          await fetchAllData();
+          if (navigator.onLine && !lastSyncError) {
+            const logsAfterImport = await getAllLocalLogs();
+            await putLocalMeta("cloudHydratedAt", Date.now());
+            await putLocalMeta("cloudRecordCount", logsAfterImport.length);
+          }
+          await recalculatePRs(); renderCalendar();
+          await selectDate(todayJ.jy, todayJ.jm, todayJ.jd); renderChart();
+        } catch (error) {
+          console.error("Local startup failed", error);
+          alert("ذخیره‌سازی محلی در دسترس نیست. لطفاً از مرورگر به‌روز استفاده کنید.");
+        } finally { showLoading(false); await updateSyncStatus(); }
       };
 
       function showLoading(show) {
@@ -1984,72 +2138,51 @@
       }
 
       async function recalculatePRs() {
-        let newPrs = {};
-        try {
-          const logsSnapshot = await getDocs(collection(db, "daily_logs"));
-          logsSnapshot.forEach((doc) => {
-            const data = doc.data();
-            if (data.exercises) {
-              for (const [exId, sets] of Object.entries(data.exercises)) {
-                let exType = "weight-rep";
-                for (const progKey in workoutPrograms) {
-                  const prog = workoutPrograms[progKey];
-                  for (const cat in prog) {
-                    const found = prog[cat].find((e) => e.id === exId);
-                    if (found) {
-                      exType = found.type;
-                      break;
-                    }
-                  }
-                }
-                sets.forEach((set) => {
-                  if (exType === "time") {
-                    const totalSec =
-                      (parseFloat(set.min) || 0) * 60 +
-                      (parseFloat(set.sec) || 0);
-                    if (totalSec > (newPrs[exId] || 0)) newPrs[exId] = totalSec;
-                  } else if (exType === "rep-only") {
-                    const r = parseFloat(set.r) || 0;
-                    if (r > (newPrs[exId] || 0)) newPrs[exId] = r;
-                  } else {
-                    const w = parseFloat(set.w) || 0;
-                    if (w > (newPrs[exId] || 0)) newPrs[exId] = w;
-                  }
-                });
-              }
+        const prs = {};
+        for (const data of Object.values(window.workoutLogHistory || {})) {
+          if (!data || !data.exercises) continue;
+          for (const [id, sets] of Object.entries(data.exercises)) {
+            let type = "weight-rep";
+            for (const key in workoutPrograms) for (const cat in workoutPrograms[key]) {
+              const found = workoutPrograms[key][cat].find(e=>e.id===id); if(found) type=found.type;
             }
-          });
-          globalPrs = newPrs;
-          await setDoc(doc(db, "totals", "prs"), globalPrs);
-        } catch (e) {
-          console.error(e);
+            (sets||[]).forEach(set=>{
+              const value = type==="time" ? (parseFloat(set.min)||0)*60+(parseFloat(set.sec)||0) : type==="rep-only" ? (parseFloat(set.r)||0) : (parseFloat(set.w)||0);
+              if(value>(prs[id]||0)) prs[id]=value;
+            });
+          }
         }
+        const changed=JSON.stringify(prs)!==JSON.stringify(globalPrs);
+        globalPrs=prs; await putLocalMeta("prs",globalPrs);
+        if(changed){await queueRemoteMutation("totals","prs","set",globalPrs);if(navigator.onLine)syncPendingChanges();}
       }
 
       async function fetchAllData() {
-        try {
-          const prSnap = await getDoc(doc(db, "totals", "prs"));
-          if (prSnap.exists()) globalPrs = prSnap.data();
-
-          const logsSnapshot = await getDocs(collection(db, "daily_logs"));
-          savedDatesList = [];
-          window.weightHistory = [];
-          window.workoutLogHistory = {};
-
-          logsSnapshot.forEach((doc) => {
-            savedDatesList.push(doc.id);
-            const data = doc.data();
-            window.workoutLogHistory[doc.id] = data;
-            if (data.bodyWeight) {
-              window.weightHistory.push({
-                date: doc.id,
-                weight: parseFloat(data.bodyWeight),
-              });
-            }
-          });
-        } catch (e) {
-          console.error(e);
+        const pending=await getPendingMutations();
+        const pendingIds=new Set(pending.filter(x=>x.collection==="daily_logs").map(x=>x.id));
+        let remoteLoaded=false;
+        if(navigator.onLine){
+          try{
+            const snapshot=await getDocs(collection(db,"daily_logs")); const remoteIds=new Set();
+            for(const item of snapshot.docs){remoteIds.add(item.id);if(!pendingIds.has(item.id))await putLocalLog({...item.data(),id:item.id});}
+            for(const item of await getAllLocalLogs())if(!remoteIds.has(item.id)&&!pendingIds.has(item.id))await deleteLocalLog(item.id);
+            const pr=await getDoc(doc(db,"totals","prs"));
+            if(pr.exists()&&!pending.some(x=>x.collection==="totals"&&x.id==="prs")){globalPrs=pr.data();await putLocalMeta("prs",globalPrs);}
+            remoteLoaded=true;lastSyncError=false;
+            await putLocalMeta("cloudHydratedAt", Date.now());
+            await putLocalMeta("cloudRecordCount", remoteIds.size);
+          }catch(e){lastSyncError=true;console.warn("Server refresh failed; using local data",e);}
         }
+        const latest=await getPendingMutations();
+        for(const item of latest){if(item.collection!=="daily_logs")continue;if(item.operation==="delete")await deleteLocalLog(item.id);else await putLocalLog({...item.data,id:item.id});}
+        const cached=await getLocalMeta("prs");
+        if(!remoteLoaded&&cached&&!latest.some(x=>x.collection==="totals"&&x.id==="prs"))globalPrs=cached.value||{};
+        savedDatesList=[];window.weightHistory=[];window.workoutLogHistory={};
+        (await getAllLocalLogs()).forEach(item=>{
+          savedDatesList.push(item.id);const data={...item};delete data.id;window.workoutLogHistory[item.id]=data;
+          if(data.bodyWeight)window.weightHistory.push({date:item.id,weight:parseFloat(data.bodyWeight)});
+        });
+        savedDatesList.sort();window.weightHistory.sort((a,b)=>a.date.localeCompare(b.date));await updateSyncStatus();
       }
 
       function renderCalendar() {
@@ -2124,18 +2257,10 @@
         document.getElementById("daily-body-weight").value = "";
         currentRoutine = "";
 
-        try {
-          const daySnap = await getDoc(doc(db, "daily_logs", selectedDateStr));
-          if (daySnap.exists()) {
-            const dayData = daySnap.data();
-            if (dayData.bodyWeight)
-              document.getElementById("daily-body-weight").value =
-                dayData.bodyWeight;
-            if (dayData.routine)
-              window.selectRoutine(dayData.routine, dayData.exercises);
-          }
-        } catch (e) {
-          console.error(e);
+        const dayData = window.workoutLogHistory[selectedDateStr];
+        if (dayData) {
+          if (dayData.bodyWeight) document.getElementById("daily-body-weight").value = dayData.bodyWeight;
+          if (dayData.routine) window.selectRoutine(dayData.routine, dayData.exercises);
         }
         showLoading(false);
       };
@@ -2325,33 +2450,59 @@
         }
       };
 
-      // تابع نمایش اطلاعات هر حرکت در مودال به همراه پخش ویدیو اختصاصی
-      window.openExerciseInfo = (exId) => {
+      // Open the modal first, then load/play media. Keep manual controls available
+      // because Android WebView and some video hosts reject autoplay or range requests.
+      window.openExerciseInfo = async (exId) => {
         const activeData = getActiveWorkoutData(selectedDateStr);
-        const ex = activeData[currentRoutine].find((e) => e.id === exId);
-
-        if (ex) {
-          document.getElementById("info-modal-title").innerText = ex.name;
-
-          const infoDescText =
-            ex.infoDesc ||
-            "توضیحات تکمیلی برای این حرکت ثبت نشده است. لطفاً ویژگی infoDesc را در کد پر کنید.";
-          document.getElementById("info-modal-desc").innerText = infoDescText;
-
-          const videoEl = document.getElementById("info-modal-video");
-          if (ex.infoVideo) {
-            videoEl.src = ex.infoVideo;
-            videoEl.style.display = "block";
-            videoEl
-              .play()
-              .catch((e) => console.log("مرورگر اجازه پخش خودکار نداد", e));
-          } else {
-            videoEl.style.display = "none";
-            videoEl.pause();
-            videoEl.src = "";
+        const routines = activeData || {};
+        let ex = (routines[currentRoutine] || []).find((item) => item.id === exId);
+        if (!ex) {
+          for (const program of Object.values(workoutPrograms)) {
+            for (const exercises of Object.values(program)) {
+              ex = exercises.find((item) => item.id === exId);
+              if (ex) break;
+            }
+            if (ex) break;
           }
+        }
+        if (!ex) return;
 
-          document.getElementById("exercise-info-modal").style.display = "flex";
+        document.getElementById("info-modal-title").innerText = ex.name;
+        document.getElementById("info-modal-desc").innerText =
+          ex.infoDesc || "توضیحات تکمیلی برای این حرکت ثبت نشده است.";
+        const modal = document.getElementById("exercise-info-modal");
+        const videoEl = document.getElementById("info-modal-video");
+        const statusEl = document.getElementById("info-modal-video-status");
+        const linkEl = document.getElementById("info-modal-video-link");
+
+        videoEl.pause();
+        videoEl.removeAttribute("src");
+        videoEl.style.display = ex.infoVideo ? "block" : "none";
+        videoEl.controls = true;
+        videoEl.muted = true;
+        videoEl.playsInline = true;
+        videoEl.preload = "metadata";
+        statusEl.style.display = ex.infoVideo ? "block" : "none";
+        statusEl.textContent = ex.infoVideo ? "در حال بارگذاری ویدیو…" : "";
+        linkEl.style.display = ex.infoVideo ? "inline-block" : "none";
+        if (ex.infoVideo) {
+          linkEl.href = ex.infoVideo;
+          videoEl.src = ex.infoVideo;
+        }
+        modal.style.display = "flex";
+        if (!ex.infoVideo) return;
+
+        videoEl.onerror = () => {
+          statusEl.textContent = "ویدیو از سرور دریافت نشد؛ اتصال یا دسترسی سرور ویدیو را بررسی کنید.";
+        };
+        videoEl.onloadeddata = () => { statusEl.style.display = "none"; };
+        videoEl.load();
+        try {
+          await videoEl.play();
+        } catch (error) {
+          statusEl.style.display = "block";
+          statusEl.textContent = "برای شروع، دکمهٔ ▶ روی ویدیو را بزنید.";
+          console.info("Video autoplay unavailable; manual playback remains enabled.", error);
         }
       };
 
@@ -2360,22 +2511,13 @@
 
         if (currentRoutine === "rest") {
           try {
-            await deleteDoc(doc(db, "daily_logs", selectedDateStr));
-            await recalculatePRs();
-            await fetchAllData();
-            renderCalendar();
-            renderChart();
-            document.getElementById("daily-body-weight").value = "";
-            document.getElementById("workout-section").style.display = "none";
-            document
-              .querySelectorAll(".routine-btn")
-              .forEach((b) => b.classList.remove("active"));
-            alert("Day data cleared and PRs updated! 🔄");
-          } catch (e) {
-            alert("Error clearing data.");
-          }
-          showLoading(false);
-          return;
+            await clearLogLocally(selectedDateStr);await fetchAllData();await recalculatePRs();renderCalendar();renderChart();
+            document.getElementById("daily-body-weight").value="";document.getElementById("workout-section").style.display="none";
+            document.querySelectorAll(".routine-btn").forEach(b=>b.classList.remove("active"));
+            alert(navigator.onLine?"روز روی گوشی پاک شد؛ همگام‌سازی در پس‌زمینه انجام می‌شود.":"روز روی گوشی پاک شد و پس از اتصال اینترنت خودکار همگام‌سازی می‌شود.");
+            if(navigator.onLine)syncPendingChanges();
+          }catch(error){console.error(error);alert("ذخیره‌سازی محلی ناموفق بود؛ اطلاعات قبلی تغییر نکرد.");}
+          showLoading(false);return;
         }
 
         let logData = {
@@ -2412,17 +2554,11 @@
         });
 
         try {
-          await setDoc(doc(db, "daily_logs", selectedDateStr), logData);
-          await recalculatePRs();
-          await fetchAllData();
-          renderCalendar();
-          renderChart();
-          alert("Workout Details & Weight Saved! 💪");
-        } catch (e) {
-          alert("Error saving data.");
-          console.error(e);
-        }
-        showLoading(false);
+          await saveLogLocally(selectedDateStr,logData);await fetchAllData();await recalculatePRs();renderCalendar();renderChart();
+          alert(navigator.onLine?"تمرین روی گوشی ذخیره شد؛ همگام‌سازی با سرور در پس‌زمینه انجام می‌شود. 💪":"تمرین روی گوشی ذخیره شد؛ پس از اتصال اینترنت خودکار به سرور ارسال می‌شود. 💪");
+          if(navigator.onLine)syncPendingChanges();
+        }catch(error){alert("ذخیره‌سازی محلی ناموفق بود؛ لطفاً پشتیبانی مرورگر از IndexedDB را بررسی کنید.");console.error(error);}
+        showLoading(false);await updateSyncStatus();
       };
 
       function shiftWeightChart(direction) {
@@ -2528,17 +2664,9 @@
 
         showLoading(true);
         try {
-          const logsSnapshot = await getDocs(collection(db, "daily_logs"));
           let exportText = `گزارش تمرینات ورزشی از ${startDate} تا ${endDate}:\n\n`;
-          let logs = [];
-
-          logsSnapshot.forEach((doc) => {
-            if (doc.id >= startDate && doc.id <= endDate) {
-              logs.push({ date: doc.id, data: doc.data() });
-            }
-          });
-
-          logs.sort((a, b) => a.date.localeCompare(b.date));
+          let logs = Object.entries(window.workoutLogHistory || {}).filter(([date])=>date>=startDate&&date<=endDate).map(([date,data])=>({date,data}));
+          logs.sort((a,b)=>a.date.localeCompare(b.date));
 
           if (!logs.length) {
             alert("⚠️ در بازه انتخاب‌شده هیچ اطلاعات تمرینی ثبت نشده است.");
@@ -2853,13 +2981,21 @@
         historyEl.scrollTop = historyEl.scrollHeight;
       };
 
-      // ثبت Service Worker برای کش کردن و پخش آفلاین ویدیوها
+      // Register the offline shell. The first controlled reload lets the service worker
+      // cache CDN scripts/modules too, so later launches can start without a network.
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("./sw.js")
-            .then((reg) => console.log("✅ Service Worker Registered!"))
-            .catch((err) => console.error("❌ Service Worker Error:", err));
+          navigator.serviceWorker.register("./sw.js").then(() => {
+            if (navigator.onLine && !sessionStorage.getItem("workout-offline-cache-warmed")) {
+              const warmCacheAndReload = () => {
+                if (!navigator.onLine || sessionStorage.getItem("workout-offline-cache-warmed")) return;
+                sessionStorage.setItem("workout-offline-cache-warmed", "1");
+                window.location.reload();
+              };
+              if (navigator.serviceWorker.controller) warmCacheAndReload();
+              else navigator.serviceWorker.addEventListener("controllerchange", warmCacheAndReload, { once: true });
+            }
+          }).catch(err => console.error("❌ Service Worker Error:", err));
         });
       }
     </script>

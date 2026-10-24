@@ -1,0 +1,6 @@
+{
+  "appId": "com.sepehr.exercise",
+  "appName": "Workout Tracker",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
