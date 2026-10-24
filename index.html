@@ -2782,17 +2782,16 @@
 
         const activeData = getActiveWorkoutData(selectedDateStr) || {};
         const exercises = activeData[currentRoutine] || [];
-        const priorDate = savedDatesList
-          .filter((date) => date < selectedDateStr)
-          .sort()
-          .reverse()
-          .find((date) => window.workoutLogHistory[date]?.exercises);
         let context = `وضعیت تمرین انتخاب‌شده برای تاریخ ${selectedDateStr} (برنامه ${currentRoutine}):\n`;
         context += "برای هر حرکت، تعداد ست کل، ست‌های ثبت‌شده و باقی‌مانده را در نظر بگیر. اگر ست‌هایی باقی مانده‌اند، توصیه‌ها را متناسب با ادامهٔ همان تمرین بده.\n";
 
         exercises.forEach((ex) => {
           const totalSets = Number(ex.sets) || 0;
-          const priorLog = priorDate ? window.workoutLogHistory[priorDate]?.exercises?.[ex.id] : null;
+          const exercisePriorDate = savedDatesList
+            .filter((date) => date < selectedDateStr && window.workoutLogHistory[date]?.exercises?.[ex.id])
+            .sort()
+            .reverse()[0];
+          const priorLog = exercisePriorDate ? window.workoutLogHistory[exercisePriorDate]?.exercises?.[ex.id] : null;
           const currentSets = [];
           const previousSets = [];
 
@@ -2833,7 +2832,7 @@
           context += `\nحرکت: ${ex.name}\n`;
           context += `تعداد کل ست‌ها: ${totalSets}\nست‌های واردشده در جلسهٔ فعلی: ${completedCount}\nست‌های باقی‌مانده: ${remainingCount}\n`;
           context += `هدف برنامه: ${ex.target || "مشخص نشده"}\n`;
-          context += `اطلاعات جلسهٔ قبلی (${priorDate || "جلسهٔ قبلی پیدا نشد"}): ${previousSets.join(" | ") || "داده‌ای ثبت نشده"}\n`;
+          context += `اطلاعات جلسهٔ قبلی (${exercisePriorDate || "جلسهٔ قبلی پیدا نشد"}): ${previousSets.join(" | ") || "داده‌ای ثبت نشده"}\n`;
           context += `اطلاعات واردشده برای جلسهٔ فعلی: ${currentSets.join(" | ") || "هنوز ستّی وارد نشده"}\n`;
         });
 
