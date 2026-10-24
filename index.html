@@ -1412,7 +1412,7 @@
           for (const item of items) {
             if (!navigator.onLine) break;
             try {
-              if (item.conflict) continue;
+              if (item.conflict) { lastSyncError = true; continue; }
               const ref = doc(db, item.collection, item.id);
               if (item.collection === "daily_logs" && item.checkConflict && !item.forceOverwrite) {
                 const remoteSnap = await getDoc(ref);
