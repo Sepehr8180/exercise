@@ -226,6 +226,7 @@
 
       /* Sets Table */
       .exercise-card {
+        position: relative;
         background-color: #262626;
         border-radius: 8px;
         padding: 12px;
@@ -350,7 +351,7 @@
 
       .weight-chart-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0;direction:rtl}
       .weight-chart-nav button,.progress-btn{border:1px solid #555;background:#303030;color:#ffb74d;border-radius:8px;padding:6px 13px;cursor:pointer;font-size:18px}
-      .progress-btn{font-size:20px;padding:3px 8px;margin-top:8px;line-height:1.2;min-width:38px;min-height:34px}
+      .progress-btn{position:absolute;top:42px;right:12px;font-size:20px;padding:3px 8px;margin:0;line-height:1.2;min-width:32px;min-height:30px;z-index:2;display:flex;align-items:center;justify-content:center}
       .previous-set{display:block;color:#ffb74d;font-size:10px;line-height:1.4;margin-top:2px;min-height:14px}
       .set-input-wrap{display:flex;flex-direction:column;min-width:0}
       .progress-legend{display:flex;gap:12px;flex-wrap:wrap;color:#ccc;font-size:12px}
@@ -2889,7 +2890,7 @@ window.openExerciseProgress = (exId, exName) => {
     type:'line',data:{labels,datasets:[
       {label:'Weight (kg)',data:rows.map(x=>x.w),borderColor:'#ff9800',yAxisID:'y',tension:.2,pointRadius:0,pointHoverRadius:4},
       {label:'Reps',data:rows.map(x=>x.r),borderColor:'#42a5f5',yAxisID:'y1',tension:.2,pointRadius:0,pointHoverRadius:4},
-      {label:'Volume',data:rows.map(x=>x.v),borderColor:'#66bb6a',yAxisID:'y2',tension:.2,pointRadius:0,pointHoverRadius:4}
+      {label:'Volume',data:rows.map(x=>x.v),borderColor:'rgba(102,187,106,0.42)',backgroundColor:'rgba(102,187,106,0.055)',borderWidth:1.5,yAxisID:'y2',tension:.3,pointRadius:0,pointHoverRadius:3,fill:true}
     ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#eee'}}},scales:{
       x:{ticks:{color:'#aaa',maxRotation:60,minRotation:35},grid:{display:false}},
       y:{type:'linear',position:'left',title:{display:true,text:'Weight (kg)',color:'#ff9800'},ticks:{color:'#ff9800'},grid:{color:'#333'}},
