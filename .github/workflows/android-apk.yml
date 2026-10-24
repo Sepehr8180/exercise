@@ -6,15 +6,26 @@ on:
     branches:
       - main
       - feature/android-app-wrapper
+      - feature/offline-first-sync
     paths:
       - "android/**"
+      - "index.html"
+      - "sw.js"
+      - ".github/workflows/android-apk.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "android/**"
+      - "index.html"
+      - "sw.js"
       - ".github/workflows/android-apk.yml"
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  validate-and-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -25,6 +36,31 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate inline JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path("index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script(?:\\s+[^>]*)?>(.*?)</script\\s*>", html, re.I | re.S)
+          count = 0
+          for index, script in enumerate(scripts):
+              if not script.strip():
+                  continue
+              Path(f"/tmp/workout-inline-{index}.mjs").write_text(script, encoding="utf-8")
+              count += 1
+          print(f"Extracted {count} inline script(s) for syntax checking")
+          PY
+          for script in /tmp/workout-inline-*.mjs; do
+            [ -e "$script" ] || continue
+            node --check "$script"
+          done
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
