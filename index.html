@@ -2893,14 +2893,14 @@
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
           navigator.serviceWorker.register("./sw.js").then(() => {
-            if (!navigator.serviceWorker.controller && navigator.onLine &&
-                !sessionStorage.getItem("workout-offline-cache-warmed")) {
-              navigator.serviceWorker.addEventListener("controllerchange", () => {
-                if (navigator.onLine && !sessionStorage.getItem("workout-offline-cache-warmed")) {
-                  sessionStorage.setItem("workout-offline-cache-warmed", "1");
-                  window.location.reload();
-                }
-              }, { once: true });
+            if (navigator.onLine && !sessionStorage.getItem("workout-offline-cache-warmed")) {
+              const warmCacheAndReload = () => {
+                if (!navigator.onLine || sessionStorage.getItem("workout-offline-cache-warmed")) return;
+                sessionStorage.setItem("workout-offline-cache-warmed", "1");
+                window.location.reload();
+              };
+              if (navigator.serviceWorker.controller) warmCacheAndReload();
+              else navigator.serviceWorker.addEventListener("controllerchange", warmCacheAndReload, { once: true });
             }
           }).catch(err => console.error("❌ Service Worker Error:", err));
         });
