@@ -2888,13 +2888,21 @@
         historyEl.scrollTop = historyEl.scrollHeight;
       };
 
-      // ثبت Service Worker برای کش کردن و پخش آفلاین ویدیوها
+      // Register the offline shell. The first controlled reload lets the service worker
+      // cache CDN scripts/modules too, so later launches can start without a network.
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("./sw.js")
-            .then((reg) => console.log("✅ Service Worker Registered!"))
-            .catch((err) => console.error("❌ Service Worker Error:", err));
+          navigator.serviceWorker.register("./sw.js").then(() => {
+            if (!navigator.serviceWorker.controller && navigator.onLine &&
+                !sessionStorage.getItem("workout-offline-cache-warmed")) {
+              navigator.serviceWorker.addEventListener("controllerchange", () => {
+                if (navigator.onLine && !sessionStorage.getItem("workout-offline-cache-warmed")) {
+                  sessionStorage.setItem("workout-offline-cache-warmed", "1");
+                  window.location.reload();
+                }
+              }, { once: true });
+            }
+          }).catch(err => console.error("❌ Service Worker Error:", err));
         });
       }
     </script>
