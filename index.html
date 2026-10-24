@@ -1353,11 +1353,27 @@
       async function localRequest(name, mode, action) {
         const database = await openLocalDb();
         return new Promise((resolve, reject) => {
-          const tx = database.transaction(name, mode);
-          let request;
-          try { request = action(tx.objectStore(name)); } catch (e) { reject(e); return; }
-          if (request) { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }
-          else { tx.oncomplete = () => resolve(true); tx.onerror = () => reject(tx.error); }
+          let tx;
+          try { tx = database.transaction(name, mode); }
+          catch (error) { reject(error); return; }
+          let request = null;
+          let result;
+          try {
+            request = action(tx.objectStore(name));
+            if (request) {
+              request.onsuccess = () => { result = request.result; };
+              request.onerror = () => reject(request.error || new Error("IndexedDB request failed"));
+            }
+          } catch (error) {
+            try { tx.abort(); } catch (_) {}
+            reject(error);
+            return;
+          }
+          // Resolve writes only after IndexedDB commits the transaction, not merely
+          // when the individual request reports success.
+          tx.oncomplete = () => resolve(request ? result : true);
+          tx.onerror = () => reject(tx.error || new Error("IndexedDB transaction failed"));
+          tx.onabort = () => reject(tx.error || new Error("IndexedDB transaction aborted"));
         });
       }
       const getAllLocalLogs = () => localRequest("logs", "readonly", s => s.getAll());
