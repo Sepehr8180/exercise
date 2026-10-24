@@ -23,6 +23,7 @@ public class MainActivity extends Activity {
 
     private WebView webView;
     private ProgressBar progressBar;
+    private WebChromeClient chromeClient;
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
 
@@ -84,7 +85,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        webView.setWebChromeClient(new WebChromeClient() {
+        chromeClient = new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 progressBar.setProgress(newProgress);
@@ -115,7 +116,8 @@ public class MainActivity extends Activity {
                 if (customViewCallback != null) customViewCallback.onCustomViewHidden();
                 customViewCallback = null;
             }
-        });
+        };
+        webView.setWebChromeClient(chromeClient);
 
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
@@ -127,7 +129,8 @@ public class MainActivity extends Activity {
     private boolean routeUrl(Uri uri) {
         String scheme = uri.getScheme();
         if (scheme == null) return true;
-        if ("https".equalsIgnoreCase(scheme) && APP_HOST.equalsIgnoreCase(uri.getHost())) {
+        if ("https".equalsIgnoreCase(scheme) && APP_HOST.equalsIgnoreCase(uri.getHost())
+                && (uri.getPath() == null || uri.getPath().startsWith("/exercise/") || "/exercise".equals(uri.getPath()))) {
             return false;
         }
         if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)
@@ -150,8 +153,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (customView != null) {
-            webView.getWebChromeClient();
-            ((WebChromeClient) webView.getWebChromeClient()).onHideCustomView();
+            chromeClient.onHideCustomView();
         } else if (webView != null && webView.canGoBack()) {
             webView.goBack();
         } else {
