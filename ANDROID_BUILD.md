@@ -36,6 +36,15 @@ cd android
 
 On Windows PowerShell, run `.\gradlew.bat assembleDebug` from the `android` directory.
 
+## Offline data behavior
+
+- The app keeps downloaded workout history and personal records in IndexedDB on the device.
+- Workout saves and day clears are committed locally first, then queued for Firestore sync.
+- Pending changes retry when connectivity returns while the app is open, and again on the next launch.
+- If a date was also changed on the server while this device was offline, the app asks before replacing the server version. If you cancel, the local change remains saved and waits for a later decision.
+- Open the app online once after installing/updating so the app shell and CDN JavaScript dependencies can be cached. Demonstration videos are cached only after they are played/downloaded once.
+- Automatic upload is not guaranteed while the app is fully closed; pending changes resume on reconnect events or the next launch.
+
 ## Important compatibility notes
 
 - The initial Android application ID is `com.sepehr.exercise`. If an older Android app has
