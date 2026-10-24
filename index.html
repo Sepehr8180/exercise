@@ -1405,7 +1405,7 @@
             } catch (e) { lastSyncError = true; console.warn("Offline change will retry:",item.key,e); break; }
           }
         } catch (e) { lastSyncError = true; console.warn("Could not read pending changes",e); }
-        finally { syncInProgress = false; await updateSyncStatus(); }
+        finally { syncInProgress = false; await updateSyncStatus(); if (navigator.onLine && !lastSyncError && (await getPendingMutations()).length) Promise.resolve().then(() => syncPendingChanges()); }
       }
       window.addEventListener("online", async () => {
         await syncPendingChanges(); await fetchAllData(); renderCalendar(); renderChart();
@@ -2570,10 +2570,9 @@
 
         showLoading(true);
         try {
-          let exportText = `گزارش تمرینات ورزشی از ${startDate} تا ${endDate}:\\n\\n`;
+          let exportText = `گزارش تمرینات ورزشی از ${startDate} تا ${endDate}:\n\n`;
           let logs = Object.entries(window.workoutLogHistory || {}).filter(([date])=>date>=startDate&&date<=endDate).map(([date,data])=>({date,data}));
           logs.sort((a,b)=>a.date.localeCompare(b.date));
-          logs.sort((a, b) => a.date.localeCompare(b.date));
 
           if (!logs.length) {
             alert("⚠️ در بازه انتخاب‌شده هیچ اطلاعات تمرینی ثبت نشده است.");
