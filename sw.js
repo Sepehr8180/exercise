@@ -27,6 +27,10 @@ self.addEventListener("fetch", event => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
 
+  // Media elements commonly use HTTP Range requests. Let the browser/WebView handle
+  // those directly: wrapping partial-content responses in Cache Storage can break MP4 playback.
+  if (request.headers.has("range")) return;
+
   // Keep same-origin HTML available offline; refresh it whenever the network works.
   if (request.destination === "document" && url.origin === self.location.origin) {
     event.respondWith(
