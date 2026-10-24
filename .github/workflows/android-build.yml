@@ -63,9 +63,23 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Validate and prepare existing web app
+      - name: Validate JavaScript and prepare web app
         run: |
           node --check scripts/prepare-www.mjs
+          node --check sw.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path("index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script(?:\s+[^>]*)?>(.*?)</script\s*>", html, re.I | re.S)
+          for index, script in enumerate(scripts):
+              if script.strip():
+                  Path(f"/tmp/workout-inline-{index}.mjs").write_text(script, encoding="utf-8")
+          PY
+          for script in /tmp/workout-inline-*.mjs; do
+            [ -e "$script" ] || continue
+            node --check "$script"
+          done
           npm run android:prepare
           test -s www/index.html
           test -s www/manifest.webmanifest
