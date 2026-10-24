@@ -408,6 +408,7 @@
     </style>
   </head>
   <body>
+    <div id="sync-status" role="status" aria-live="polite" style="position:sticky;top:0;z-index:1000;text-align:center;background:#202020;border:1px solid #444;border-radius:8px;padding:6px 10px;margin:0 auto 8px;max-width:600px;font-size:12px">در حال آماده‌سازی ذخیره‌سازی محلی…</div>
     <div class="container">
       <div id="loading">⏳ Syncing...</div>
       <h3>🗓️ Training Calendar</h3>
@@ -1328,6 +1329,90 @@
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
 
+      const LOCAL_DB_NAME = "workout-tracker-offline-v1";
+      let localDbPromise, syncInProgress = false, lastSyncError = false;
+      function openLocalDb() {
+        if (localDbPromise) return localDbPromise;
+        localDbPromise = new Promise((resolve, reject) => {
+          const request = indexedDB.open(LOCAL_DB_NAME, 1);
+          request.onupgradeneeded = () => {
+            const database = request.result;
+            if (!database.objectStoreNames.contains("logs")) database.createObjectStore("logs", { keyPath: "id" });
+            if (!database.objectStoreNames.contains("pending")) database.createObjectStore("pending", { keyPath: "key" });
+            if (!database.objectStoreNames.contains("meta")) database.createObjectStore("meta", { keyPath: "key" });
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error || new Error("IndexedDB unavailable"));
+        });
+        return localDbPromise;
+      }
+      async function localRequest(name, mode, action) {
+        const database = await openLocalDb();
+        return new Promise((resolve, reject) => {
+          const tx = database.transaction(name, mode);
+          let request;
+          try { request = action(tx.objectStore(name)); } catch (e) { reject(e); return; }
+          if (request) { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }
+          else { tx.oncomplete = () => resolve(true); tx.onerror = () => reject(tx.error); }
+        });
+      }
+      const getAllLocalLogs = () => localRequest("logs", "readonly", s => s.getAll());
+      const putLocalLog = v => localRequest("logs", "readwrite", s => s.put(v));
+      const deleteLocalLog = id => localRequest("logs", "readwrite", s => s.delete(id));
+      const getPendingMutations = () => localRequest("pending", "readonly", s => s.getAll());
+      const putPendingMutation = v => localRequest("pending", "readwrite", s => s.put(v));
+      const deletePendingMutation = key => localRequest("pending", "readwrite", s => s.delete(key));
+      const getLocalMeta = key => localRequest("meta", "readonly", s => s.get(key));
+      const putLocalMeta = (key, value) => localRequest("meta", "readwrite", s => s.put({key, value}));
+
+      async function queueRemoteMutation(collectionName, id, operation, data = null) {
+        const key = collectionName + "/" + id;
+        await putPendingMutation({key, collection: collectionName, id, operation, data,
+          mutationId: Date.now().toString(36) + "-" + Math.random().toString(36).slice(2), createdAt: Date.now()});
+        updateSyncStatus();
+      }
+      async function saveLogLocally(id, data) {
+        await putLocalLog({...data, id});
+        await queueRemoteMutation("daily_logs", id, "set", data);
+      }
+      async function clearLogLocally(id) {
+        await deleteLocalLog(id);
+        await queueRemoteMutation("daily_logs", id, "delete");
+      }
+      async function updateSyncStatus() {
+        const el = document.getElementById("sync-status");
+        if (!el) return;
+        let count = 0;
+        try { count = (await getPendingMutations()).length; } catch (_) {}
+        if (!navigator.onLine) { el.textContent = count ? "آفلاین · " + count + " تغییر ذخیره‌شده روی گوشی" : "آفلاین · اطلاعات ذخیره‌شده روی گوشی"; el.style.color = "#ffca80"; }
+        else if (syncInProgress) { el.textContent = "در حال همگام‌سازی با سرور…"; el.style.color = "#80cbc4"; }
+        else if (count) { el.textContent = count + " تغییر منتظر ارسال به سرور"; el.style.color = "#ffca80"; }
+        else if (lastSyncError) { el.textContent = "اتصال برقرار است، اما همگام‌سازی ناموفق بود"; el.style.color = "#ff8a80"; }
+        else { el.textContent = "همهٔ اطلاعات همگام‌سازی شده‌اند"; el.style.color = "#81c784"; }
+      }
+      async function syncPendingChanges() {
+        if (!navigator.onLine || syncInProgress) return;
+        syncInProgress = true; lastSyncError = false; await updateSyncStatus();
+        try {
+          const items = (await getPendingMutations()).sort((a,b)=>a.createdAt-b.createdAt);
+          for (const item of items) {
+            if (!navigator.onLine) break;
+            try {
+              const ref = doc(db, item.collection, item.id);
+              if (item.operation === "delete") await deleteDoc(ref); else await setDoc(ref, item.data);
+              const latest = (await getPendingMutations()).find(x=>x.key===item.key);
+              if (latest && latest.mutationId===item.mutationId) await deletePendingMutation(item.key);
+            } catch (e) { lastSyncError = true; console.warn("Offline change will retry:",item.key,e); break; }
+          }
+        } catch (e) { lastSyncError = true; console.warn("Could not read pending changes",e); }
+        finally { syncInProgress = false; await updateSyncStatus(); }
+      }
+      window.addEventListener("online", async () => {
+        await syncPendingChanges(); await fetchAllData(); renderCalendar(); renderChart();
+        const [y,m,d] = selectedDateStr.split("-").map(Number); await selectDate(y,m,d); await updateSyncStatus();
+      });
+      window.addEventListener("offline", updateSyncStatus);
+
       // ۱. مخزن تمام برنامه‌های ورزشی شما
       // به تمام حرکات، ویژگی‌های اختصاصی infoDesc (نکته فارسی متفاوت) و infoVideo (لینک ویدیو) اضافه شد.
       const workoutPrograms = {
@@ -1970,11 +2055,14 @@
 
       window.onload = async () => {
         showLoading(true);
-        await fetchAllData();
-        renderCalendar();
-        await selectDate(todayJ.jy, todayJ.jm, todayJ.jd);
-        renderChart();
-        showLoading(false);
+        try {
+          await openLocalDb(); await updateSyncStatus(); await syncPendingChanges();
+          await fetchAllData(); await recalculatePRs(); renderCalendar();
+          await selectDate(todayJ.jy, todayJ.jm, todayJ.jd); renderChart();
+        } catch (error) {
+          console.error("Local startup failed", error);
+          alert("ذخیره‌سازی محلی در دسترس نیست. لطفاً از مرورگر به‌روز استفاده کنید.");
+        } finally { showLoading(false); await updateSyncStatus(); }
       };
 
       function showLoading(show) {
@@ -1984,72 +2072,49 @@
       }
 
       async function recalculatePRs() {
-        let newPrs = {};
-        try {
-          const logsSnapshot = await getDocs(collection(db, "daily_logs"));
-          logsSnapshot.forEach((doc) => {
-            const data = doc.data();
-            if (data.exercises) {
-              for (const [exId, sets] of Object.entries(data.exercises)) {
-                let exType = "weight-rep";
-                for (const progKey in workoutPrograms) {
-                  const prog = workoutPrograms[progKey];
-                  for (const cat in prog) {
-                    const found = prog[cat].find((e) => e.id === exId);
-                    if (found) {
-                      exType = found.type;
-                      break;
-                    }
-                  }
-                }
-                sets.forEach((set) => {
-                  if (exType === "time") {
-                    const totalSec =
-                      (parseFloat(set.min) || 0) * 60 +
-                      (parseFloat(set.sec) || 0);
-                    if (totalSec > (newPrs[exId] || 0)) newPrs[exId] = totalSec;
-                  } else if (exType === "rep-only") {
-                    const r = parseFloat(set.r) || 0;
-                    if (r > (newPrs[exId] || 0)) newPrs[exId] = r;
-                  } else {
-                    const w = parseFloat(set.w) || 0;
-                    if (w > (newPrs[exId] || 0)) newPrs[exId] = w;
-                  }
-                });
-              }
+        const prs = {};
+        for (const data of Object.values(window.workoutLogHistory || {})) {
+          if (!data || !data.exercises) continue;
+          for (const [id, sets] of Object.entries(data.exercises)) {
+            let type = "weight-rep";
+            for (const key in workoutPrograms) for (const cat in workoutPrograms[key]) {
+              const found = workoutPrograms[key][cat].find(e=>e.id===id); if(found) type=found.type;
             }
-          });
-          globalPrs = newPrs;
-          await setDoc(doc(db, "totals", "prs"), globalPrs);
-        } catch (e) {
-          console.error(e);
+            (sets||[]).forEach(set=>{
+              const value = type==="time" ? (parseFloat(set.min)||0)*60+(parseFloat(set.sec)||0) : type==="rep-only" ? (parseFloat(set.r)||0) : (parseFloat(set.w)||0);
+              if(value>(prs[id]||0)) prs[id]=value;
+            });
+          }
         }
+        const changed=JSON.stringify(prs)!==JSON.stringify(globalPrs);
+        globalPrs=prs; await putLocalMeta("prs",globalPrs);
+        if(changed){await queueRemoteMutation("totals","prs","set",globalPrs);if(navigator.onLine)syncPendingChanges();}
       }
 
       async function fetchAllData() {
-        try {
-          const prSnap = await getDoc(doc(db, "totals", "prs"));
-          if (prSnap.exists()) globalPrs = prSnap.data();
-
-          const logsSnapshot = await getDocs(collection(db, "daily_logs"));
-          savedDatesList = [];
-          window.weightHistory = [];
-          window.workoutLogHistory = {};
-
-          logsSnapshot.forEach((doc) => {
-            savedDatesList.push(doc.id);
-            const data = doc.data();
-            window.workoutLogHistory[doc.id] = data;
-            if (data.bodyWeight) {
-              window.weightHistory.push({
-                date: doc.id,
-                weight: parseFloat(data.bodyWeight),
-              });
-            }
-          });
-        } catch (e) {
-          console.error(e);
+        const pending=await getPendingMutations();
+        const pendingIds=new Set(pending.filter(x=>x.collection==="daily_logs").map(x=>x.id));
+        let remoteLoaded=false;
+        if(navigator.onLine){
+          try{
+            const snapshot=await getDocs(collection(db,"daily_logs")); const remoteIds=new Set();
+            for(const item of snapshot.docs){remoteIds.add(item.id);if(!pendingIds.has(item.id))await putLocalLog({...item.data(),id:item.id});}
+            for(const item of await getAllLocalLogs())if(!remoteIds.has(item.id)&&!pendingIds.has(item.id))await deleteLocalLog(item.id);
+            const pr=await getDoc(doc(db,"totals","prs"));
+            if(pr.exists()&&!pending.some(x=>x.collection==="totals"&&x.id==="prs")){globalPrs=pr.data();await putLocalMeta("prs",globalPrs);}
+            remoteLoaded=true;lastSyncError=false;
+          }catch(e){lastSyncError=true;console.warn("Server refresh failed; using local data",e);}
         }
+        const latest=await getPendingMutations();
+        for(const item of latest){if(item.collection!=="daily_logs")continue;if(item.operation==="delete")await deleteLocalLog(item.id);else await putLocalLog({...item.data,id:item.id});}
+        const cached=await getLocalMeta("prs");
+        if(!remoteLoaded&&cached&&!latest.some(x=>x.collection==="totals"&&x.id==="prs"))globalPrs=cached.value||{};
+        savedDatesList=[];window.weightHistory=[];window.workoutLogHistory={};
+        (await getAllLocalLogs()).forEach(item=>{
+          savedDatesList.push(item.id);const data={...item};delete data.id;window.workoutLogHistory[item.id]=data;
+          if(data.bodyWeight)window.weightHistory.push({date:item.id,weight:parseFloat(data.bodyWeight)});
+        });
+        savedDatesList.sort();window.weightHistory.sort((a,b)=>a.date.localeCompare(b.date));await updateSyncStatus();
       }
 
       function renderCalendar() {
@@ -2124,18 +2189,10 @@
         document.getElementById("daily-body-weight").value = "";
         currentRoutine = "";
 
-        try {
-          const daySnap = await getDoc(doc(db, "daily_logs", selectedDateStr));
-          if (daySnap.exists()) {
-            const dayData = daySnap.data();
-            if (dayData.bodyWeight)
-              document.getElementById("daily-body-weight").value =
-                dayData.bodyWeight;
-            if (dayData.routine)
-              window.selectRoutine(dayData.routine, dayData.exercises);
-          }
-        } catch (e) {
-          console.error(e);
+        const dayData = window.workoutLogHistory[selectedDateStr];
+        if (dayData) {
+          if (dayData.bodyWeight) document.getElementById("daily-body-weight").value = dayData.bodyWeight;
+          if (dayData.routine) window.selectRoutine(dayData.routine, dayData.exercises);
         }
         showLoading(false);
       };
@@ -2360,22 +2417,13 @@
 
         if (currentRoutine === "rest") {
           try {
-            await deleteDoc(doc(db, "daily_logs", selectedDateStr));
-            await recalculatePRs();
-            await fetchAllData();
-            renderCalendar();
-            renderChart();
-            document.getElementById("daily-body-weight").value = "";
-            document.getElementById("workout-section").style.display = "none";
-            document
-              .querySelectorAll(".routine-btn")
-              .forEach((b) => b.classList.remove("active"));
-            alert("Day data cleared and PRs updated! 🔄");
-          } catch (e) {
-            alert("Error clearing data.");
-          }
-          showLoading(false);
-          return;
+            await clearLogLocally(selectedDateStr);await fetchAllData();await recalculatePRs();renderCalendar();renderChart();
+            document.getElementById("daily-body-weight").value="";document.getElementById("workout-section").style.display="none";
+            document.querySelectorAll(".routine-btn").forEach(b=>b.classList.remove("active"));
+            alert(navigator.onLine?"روز روی گوشی پاک شد؛ همگام‌سازی در پس‌زمینه انجام می‌شود.":"روز روی گوشی پاک شد و پس از اتصال اینترنت خودکار همگام‌سازی می‌شود.");
+            if(navigator.onLine)syncPendingChanges();
+          }catch(error){console.error(error);alert("ذخیره‌سازی محلی ناموفق بود؛ اطلاعات قبلی تغییر نکرد.");}
+          showLoading(false);return;
         }
 
         let logData = {
@@ -2412,17 +2460,11 @@
         });
 
         try {
-          await setDoc(doc(db, "daily_logs", selectedDateStr), logData);
-          await recalculatePRs();
-          await fetchAllData();
-          renderCalendar();
-          renderChart();
-          alert("Workout Details & Weight Saved! 💪");
-        } catch (e) {
-          alert("Error saving data.");
-          console.error(e);
-        }
-        showLoading(false);
+          await saveLogLocally(selectedDateStr,logData);await fetchAllData();await recalculatePRs();renderCalendar();renderChart();
+          alert(navigator.onLine?"تمرین روی گوشی ذخیره شد؛ همگام‌سازی با سرور در پس‌زمینه انجام می‌شود. 💪":"تمرین روی گوشی ذخیره شد؛ پس از اتصال اینترنت خودکار به سرور ارسال می‌شود. 💪");
+          if(navigator.onLine)syncPendingChanges();
+        }catch(error){alert("ذخیره‌سازی محلی ناموفق بود؛ لطفاً پشتیبانی مرورگر از IndexedDB را بررسی کنید.");console.error(error);}
+        showLoading(false);await updateSyncStatus();
       };
 
       function shiftWeightChart(direction) {
@@ -2528,16 +2570,9 @@
 
         showLoading(true);
         try {
-          const logsSnapshot = await getDocs(collection(db, "daily_logs"));
-          let exportText = `گزارش تمرینات ورزشی از ${startDate} تا ${endDate}:\n\n`;
-          let logs = [];
-
-          logsSnapshot.forEach((doc) => {
-            if (doc.id >= startDate && doc.id <= endDate) {
-              logs.push({ date: doc.id, data: doc.data() });
-            }
-          });
-
+          let exportText = `گزارش تمرینات ورزشی از ${startDate} تا ${endDate}:\\n\\n`;
+          let logs = Object.entries(window.workoutLogHistory || {}).filter(([date])=>date>=startDate&&date<=endDate).map(([date,data])=>({date,data}));
+          logs.sort((a,b)=>a.date.localeCompare(b.date));
           logs.sort((a, b) => a.date.localeCompare(b.date));
 
           if (!logs.length) {
