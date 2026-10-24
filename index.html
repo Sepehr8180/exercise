@@ -1078,6 +1078,8 @@
             display: none;
           "
         ></video>
+        <p id="info-modal-video-status" style="display:none;color:#ffcc80;font-size:12px;text-align:center;margin:4px 0 10px"></p>
+        <a id="info-modal-video-link" target="_blank" rel="noopener noreferrer" style="display:none;color:#ffb74d;text-align:center;font-size:12px;margin-bottom:10px" href="#">بازکردن مستقیم ویدیو</a>
         <p
           id="info-modal-desc"
           style="
@@ -1096,6 +1098,8 @@
             document.getElementById('exercise-info-modal').style.display =
               'none';
             document.getElementById('info-modal-video').pause();
+            document.getElementById('info-modal-video').removeAttribute('src');
+            document.getElementById('info-modal-video').load();
           "
           style="
             background: #555;
@@ -2085,8 +2089,25 @@
       window.onload = async () => {
         showLoading(true);
         try {
-          await openLocalDb(); await updateSyncStatus(); await syncPendingChanges();
-          await fetchAllData(); await recalculatePRs(); renderCalendar();
+          await openLocalDb();
+          if (navigator.storage && navigator.storage.persist) {
+            try { await navigator.storage.persist(); } catch (_) {}
+          }
+          const existingLogs = await getAllLocalLogs();
+          const hydrated = await getLocalMeta("cloudHydratedAt");
+          const status = document.getElementById("sync-status");
+          if (navigator.onLine && (!hydrated || !existingLogs.length)) {
+            status.textContent = "در حال دریافت تمام سوابق تمرین از سرور و ذخیره روی گوشی…";
+            status.style.color = "#80cbc4";
+          }
+          await updateSyncStatus(); await syncPendingChanges();
+          await fetchAllData();
+          if (navigator.onLine && !lastSyncError) {
+            const logsAfterImport = await getAllLocalLogs();
+            await putLocalMeta("cloudHydratedAt", Date.now());
+            await putLocalMeta("cloudRecordCount", logsAfterImport.length);
+          }
+          await recalculatePRs(); renderCalendar();
           await selectDate(todayJ.jy, todayJ.jm, todayJ.jd); renderChart();
         } catch (error) {
           console.error("Local startup failed", error);
@@ -2132,6 +2153,8 @@
             const pr=await getDoc(doc(db,"totals","prs"));
             if(pr.exists()&&!pending.some(x=>x.collection==="totals"&&x.id==="prs")){globalPrs=pr.data();await putLocalMeta("prs",globalPrs);}
             remoteLoaded=true;lastSyncError=false;
+            await putLocalMeta("cloudHydratedAt", Date.now());
+            await putLocalMeta("cloudRecordCount", remoteIds.size);
           }catch(e){lastSyncError=true;console.warn("Server refresh failed; using local data",e);}
         }
         const latest=await getPendingMutations();
@@ -2411,33 +2434,59 @@
         }
       };
 
-      // تابع نمایش اطلاعات هر حرکت در مودال به همراه پخش ویدیو اختصاصی
-      window.openExerciseInfo = (exId) => {
+      // Open the modal first, then load/play media. Keep manual controls available
+      // because Android WebView and some video hosts reject autoplay or range requests.
+      window.openExerciseInfo = async (exId) => {
         const activeData = getActiveWorkoutData(selectedDateStr);
-        const ex = activeData[currentRoutine].find((e) => e.id === exId);
-
-        if (ex) {
-          document.getElementById("info-modal-title").innerText = ex.name;
-
-          const infoDescText =
-            ex.infoDesc ||
-            "توضیحات تکمیلی برای این حرکت ثبت نشده است. لطفاً ویژگی infoDesc را در کد پر کنید.";
-          document.getElementById("info-modal-desc").innerText = infoDescText;
-
-          const videoEl = document.getElementById("info-modal-video");
-          if (ex.infoVideo) {
-            videoEl.src = ex.infoVideo;
-            videoEl.style.display = "block";
-            videoEl
-              .play()
-              .catch((e) => console.log("مرورگر اجازه پخش خودکار نداد", e));
-          } else {
-            videoEl.style.display = "none";
-            videoEl.pause();
-            videoEl.src = "";
+        const routines = activeData || {};
+        let ex = (routines[currentRoutine] || []).find((item) => item.id === exId);
+        if (!ex) {
+          for (const program of Object.values(workoutPrograms)) {
+            for (const exercises of Object.values(program)) {
+              ex = exercises.find((item) => item.id === exId);
+              if (ex) break;
+            }
+            if (ex) break;
           }
+        }
+        if (!ex) return;
 
-          document.getElementById("exercise-info-modal").style.display = "flex";
+        document.getElementById("info-modal-title").innerText = ex.name;
+        document.getElementById("info-modal-desc").innerText =
+          ex.infoDesc || "توضیحات تکمیلی برای این حرکت ثبت نشده است.";
+        const modal = document.getElementById("exercise-info-modal");
+        const videoEl = document.getElementById("info-modal-video");
+        const statusEl = document.getElementById("info-modal-video-status");
+        const linkEl = document.getElementById("info-modal-video-link");
+
+        videoEl.pause();
+        videoEl.removeAttribute("src");
+        videoEl.style.display = ex.infoVideo ? "block" : "none";
+        videoEl.controls = true;
+        videoEl.muted = true;
+        videoEl.playsInline = true;
+        videoEl.preload = "metadata";
+        statusEl.style.display = ex.infoVideo ? "block" : "none";
+        statusEl.textContent = ex.infoVideo ? "در حال بارگذاری ویدیو…" : "";
+        linkEl.style.display = ex.infoVideo ? "inline-block" : "none";
+        if (ex.infoVideo) {
+          linkEl.href = ex.infoVideo;
+          videoEl.src = ex.infoVideo;
+        }
+        modal.style.display = "flex";
+        if (!ex.infoVideo) return;
+
+        videoEl.onerror = () => {
+          statusEl.textContent = "ویدیو از سرور دریافت نشد؛ اتصال یا دسترسی سرور ویدیو را بررسی کنید.";
+        };
+        videoEl.onloadeddata = () => { statusEl.style.display = "none"; };
+        videoEl.load();
+        try {
+          await videoEl.play();
+        } catch (error) {
+          statusEl.style.display = "block";
+          statusEl.textContent = "برای شروع، دکمهٔ ▶ روی ویدیو را بزنید.";
+          console.info("Video autoplay unavailable; manual playback remains enabled.", error);
         }
       };
 
