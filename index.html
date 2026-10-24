@@ -1365,26 +1365,40 @@
       const getLocalMeta = key => localRequest("meta", "readonly", s => s.get(key));
       const putLocalMeta = (key, value) => localRequest("meta", "readwrite", s => s.put({key, value}));
 
-      async function queueRemoteMutation(collectionName, id, operation, data = null) {
+      function stableStringify(value) {
+        if (Array.isArray(value)) return "[" + value.map(stableStringify).join(",") + "]";
+        if (value && typeof value === "object") return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + stableStringify(value[key])).join(",") + "}";
+        return JSON.stringify(value);
+      }
+      async function queueRemoteMutation(collectionName, id, operation, data = null, baseData = null, checkConflict = false) {
         const key = collectionName + "/" + id;
-        await putPendingMutation({key, collection: collectionName, id, operation, data,
+        await putPendingMutation({key, collection: collectionName, id, operation, data, baseData, checkConflict,
           mutationId: Date.now().toString(36) + "-" + Math.random().toString(36).slice(2), createdAt: Date.now()});
         updateSyncStatus();
       }
       async function saveLogLocally(id, data) {
+        const key = "daily_logs/" + id;
+        const existing = (await getPendingMutations()).find(item => item.key === key);
+        const base = existing ? existing.baseData : (window.workoutLogHistory[id] ? JSON.parse(JSON.stringify(window.workoutLogHistory[id])) : null);
         await putLocalLog({...data, id});
-        await queueRemoteMutation("daily_logs", id, "set", data);
+        await queueRemoteMutation("daily_logs", id, "set", data, base, true);
       }
       async function clearLogLocally(id) {
+        const key = "daily_logs/" + id;
+        const existing = (await getPendingMutations()).find(item => item.key === key);
+        const base = existing ? existing.baseData : (window.workoutLogHistory[id] ? JSON.parse(JSON.stringify(window.workoutLogHistory[id])) : null);
         await deleteLocalLog(id);
-        await queueRemoteMutation("daily_logs", id, "delete");
+        await queueRemoteMutation("daily_logs", id, "delete", null, base, true);
       }
       async function updateSyncStatus() {
         const el = document.getElementById("sync-status");
         if (!el) return;
-        let count = 0;
-        try { count = (await getPendingMutations()).length; } catch (_) {}
-        if (!navigator.onLine) { el.textContent = count ? "آفلاین · " + count + " تغییر ذخیره‌شده روی گوشی" : "آفلاین · اطلاعات ذخیره‌شده روی گوشی"; el.style.color = "#ffca80"; }
+        let pending = [];
+        try { pending = await getPendingMutations(); } catch (_) {}
+        const count = pending.length;
+        const conflicts = pending.filter(item => item.conflict).length;
+        if (conflicts) { el.textContent = "تعارض اطلاعات در " + conflicts + " مورد؛ تغییرات گوشی محفوظ است و نیاز به بررسی دارد"; el.style.color = "#ff8a80"; }
+        else if (!navigator.onLine) { el.textContent = count ? "آفلاین · " + count + " تغییر ذخیره‌شده روی گوشی" : "آفلاین · اطلاعات ذخیره‌شده روی گوشی"; el.style.color = "#ffca80"; }
         else if (syncInProgress) { el.textContent = "در حال همگام‌سازی با سرور…"; el.style.color = "#80cbc4"; }
         else if (count) { el.textContent = count + " تغییر منتظر ارسال به سرور"; el.style.color = "#ffca80"; }
         else if (lastSyncError) { el.textContent = "اتصال برقرار است، اما همگام‌سازی ناموفق بود"; el.style.color = "#ff8a80"; }
@@ -1398,7 +1412,22 @@
           for (const item of items) {
             if (!navigator.onLine) break;
             try {
+              if (item.conflict) continue;
               const ref = doc(db, item.collection, item.id);
+              if (item.collection === "daily_logs" && item.checkConflict && !item.forceOverwrite) {
+                const remoteSnap = await getDoc(ref);
+                const remoteData = remoteSnap.exists() ? remoteSnap.data() : null;
+                if (stableStringify(remoteData) !== stableStringify(item.baseData)) {
+                  const overwrite = confirm("این روز از زمان آخرین دریافت روی سرور هم تغییر کرده است.\n\n«تأیید» = نسخهٔ ذخیره‌شده روی گوشی جایگزین سرور شود.\n«لغو» = تغییرات گوشی حفظ شود و فعلاً ارسال نشود.");
+                  if (!overwrite) {
+                    await putPendingMutation({...item, conflict: true});
+                    lastSyncError = true;
+                    continue;
+                  }
+                  item.forceOverwrite = true;
+                  await putPendingMutation(item);
+                }
+              }
               if (item.operation === "delete") await deleteDoc(ref); else await setDoc(ref, item.data);
               const latest = (await getPendingMutations()).find(x=>x.key===item.key);
               if (latest && latest.mutationId===item.mutationId) await deletePendingMutation(item.key);
