@@ -33,7 +33,7 @@ self.addEventListener("fetch", event => {
       fetch(request).then(response => {
         if (response && response.ok) caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()));
         return response;
-      }).catch(async () => (await caches.match(request)) || (await caches.match("./index.html"))
+      }).catch(async () => (await caches.match(request)) || (await caches.match("./index.html")))
     );
     return;
   }
